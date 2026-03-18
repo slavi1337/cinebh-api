@@ -1,5 +1,6 @@
 Enum UserRole {
   CUSTOMER
+  EMPLOYEE
   ADMIN
 }
 
@@ -23,23 +24,24 @@ Enum ReservationStatus {
 }
 
 Table users {
-  id integer [primary key, increment]
+  id uuid [primary key]
   first_name varchar(50) [not null]
   last_name varchar(50) [not null]
   email varchar(255) [unique, not null]
   password_hash varchar(255) [not null]
-  phone varchar(50) [not null]
-  profile_image_url varchar(255)
+  phone varchar(50) [unique, not null]
+  profile_image_url varchar(255) [not null]
   role UserRole [default: 'CUSTOMER']
   is_active boolean [default: false]
-  city_id integer
+  city_id uuid [not null]
+  street_address varchar(50) [not null]
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
-Table verification_codes {
-  id integer [primary key, increment]
-  user_id integer [not null]
+Table password_reset_codes {
+  id uuid [primary key]
+  user_id uuid [not null]
   code varchar(6) [not null]
   expires_at timestamp [not null]
   is_used boolean [default: false]
@@ -47,7 +49,7 @@ Table verification_codes {
 }
 
 Table movies {
-  id integer [primary key, increment]
+  id uuid [primary key]
   title varchar(255) [not null]
   synopsis text
   duration_minutes integer
@@ -57,54 +59,66 @@ Table movies {
   trailer_url varchar(255)
   cover_image_url varchar(255)
   status MovieStatus [default: 'DRAFT']
+  draft_step integer [default: 1]
   release_date date
   end_date date
   created_at timestamp [default: `now()`]
 }
 
 Table genres {
-  id integer [primary key, increment]
+  id uuid [primary key]
   name varchar(50) [unique, not null]
 }
 
 Table movie_genres {
-  movie_id integer
-  genre_id integer
+  id uuid [primary key]
+  movie_id uuid [not null]
+  genre_id uuid [not null]
   Indexes {
-    (movie_id, genre_id) [pk]
+    (movie_id, genre_id) [unique]
   }
 }
 
-Table crew_members {
-  id integer [primary key, increment]
-  first_name varchar(100)
-  last_name varchar(100)
-  role varchar(100)
+Table people {
+  id uuid [primary key]
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
 }
 
-Table movie_crew {
-  movie_id integer
-  crew_id integer
+Table movie_cast {
+  id uuid [primary key]
+  movie_id uuid [not null]
+  person_id uuid [not null]
+  character_name varchar(100)
   Indexes {
-    (movie_id, crew_id) [pk]
+    (movie_id, person_id) [unique]
+  }
+}
+
+Table movie_writers {
+  id uuid [primary key]
+  movie_id uuid [not null]
+  person_id uuid [not null]
+  Indexes {
+    (movie_id, person_id) [unique]
   }
 }
 
 Table movie_images {
-  id integer [primary key, increment]
-  movie_id integer
-  image_url varchar(255)
+  id uuid [primary key]
+  movie_id uuid [not null]
+  image_url varchar(255) [not null]
 }
 
 Table cities {
-  id integer [primary key, increment]
+  id uuid [primary key]
   name varchar(100) [not null]
   country varchar(100) [default: 'Bosnia and Herzegovina']
 }
 
 Table venues {
-  id integer [primary key, increment]
-  city_id integer [not null]
+  id uuid [primary key]
+  city_id uuid [not null]
   name varchar(255) [not null]
   street_address varchar(255) [not null]
   phone varchar(50)
@@ -112,65 +126,74 @@ Table venues {
 }
 
 Table halls {
-  id integer [primary key, increment]
-  venue_id integer [not null]
-  name varchar(50)
+  id uuid [primary key]
+  venue_id uuid [not null]
+  name varchar(50) [not null]
 }
 
 Table seats {
-  id integer [primary key, increment]
-  hall_id integer [not null]
+  id uuid [primary key]
+  hall_id uuid [not null]
   row_num varchar(10) [not null]
   seat_num varchar(10) [not null]
   type SeatType [default: 'REGULAR']
-  price_multiplier decimal // regular:7, vip:10, love:24
+  price decimal [not null]
 }
 
 Table projections {
-  id integer [primary key, increment]
-  movie_id integer [not null]
-  hall_id integer [not null]
+  id uuid [primary key]
+  movie_id uuid [not null]
+  hall_id uuid [not null]
   start_time timestamp [not null]
   created_at timestamp [default: `now()`]
+  Indexes {
+    (hall_id, start_time) [unique]
+  }
 }
 
 Table reservations {
-  id integer [primary key, increment]
-  user_id integer [not null]
-  projection_id integer [not null]
+  id uuid [primary key]
+  user_id uuid [not null]
+  projection_id uuid [not null]
   status ReservationStatus [default: 'PENDING']
-  total_price decimal
-  expires_at timestamp // 5min za kupovinu, a sat prije pocetka za rezervaciju
+  total_price decimal [not null]
+  expires_at timestamp [not null]
   is_reminder_enabled boolean [default: false]
   created_at timestamp [default: `now()`]
 }
 
 Table reservation_seats {
-  reservation_id integer
-  seat_id integer
+  id uuid [primary key]
+  reservation_id uuid [not null]
+  seat_id uuid [not null]
+  projection_id uuid [not null]
   Indexes {
-    (reservation_id, seat_id) [pk]
+    (reservation_id, seat_id) [unique]
+    (projection_id, seat_id) [unique]
   }
 }
 
 Table notifications {
-  id integer [primary key, increment]
-  user_id integer [not null]
-  title varchar(255)
-  message text
+  id uuid [primary key]
+  user_id uuid [not null]
+  title varchar(255) [not null]
+  message text [not null]
   is_read boolean [default: false]
-  send_time timestamp // dan prije pocetka ako su ukljuceni reminderi...
+  send_time timestamp
   created_at timestamp [default: `now()`]
 }
 
 Ref: users.city_id > cities.id
-Ref: verification_codes.user_id > users.id
+Ref: password_reset_codes.user_id > users.id
 
 Ref: movie_genres.movie_id > movies.id
 Ref: movie_genres.genre_id > genres.id
 
-Ref: movie_crew.movie_id > movies.id
-Ref: movie_crew.crew_id > crew_members.id
+Ref: movie_cast.movie_id > movies.id
+Ref: movie_cast.person_id > people.id
+
+Ref: movie_writers.movie_id > movies.id
+Ref: movie_writers.person_id > people.id
 
 Ref: movie_images.movie_id > movies.id
 
@@ -186,5 +209,6 @@ Ref: reservations.projection_id > projections.id
 
 Ref: reservation_seats.reservation_id > reservations.id
 Ref: reservation_seats.seat_id > seats.id
+Ref: reservation_seats.projection_id > projections.id
 
 Ref: notifications.user_id > users.id
