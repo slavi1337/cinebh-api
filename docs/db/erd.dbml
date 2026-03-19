@@ -16,11 +16,25 @@ Enum SeatType {
   VIP
 }
 
-Enum ReservationStatus {
-  PENDING
-  COMPLETED
+Enum BookingStatus {
+  HOLD
+  RESERVED
+  PAID
   CANCELLED
   EXPIRED
+}
+
+Enum VerificationCodeType {
+  ACCOUNT_VERIFICATION
+  PASSWORD_RESET
+}
+
+Enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  REFUNDED
 }
 
 Table users {
@@ -34,15 +48,17 @@ Table users {
   role UserRole [default: 'CUSTOMER']
   is_active boolean [default: false]
   city_id uuid [not null]
-  street_address varchar(50) [not null]
+  street_address varchar(255) [not null]
+  stripe_customer_id varchar(255) [unique]
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
-Table password_reset_codes {
+Table verification_codes {
   id uuid [primary key]
   user_id uuid [not null]
-  code varchar(6) [not null]
+  type VerificationCodeType [not null]
+  code_hash varchar(255) [not null]
   expires_at timestamp [not null]
   is_used boolean [default: false]
   created_at timestamp [default: `now()`]
@@ -55,9 +71,7 @@ Table movies {
   duration_minutes integer
   pg_rating varchar(8)
   language varchar(50)
-  director varchar(255)
   trailer_url varchar(255)
-  cover_image_url varchar(255)
   status MovieStatus [default: 'DRAFT']
   draft_step integer [default: 1]
   release_date date
@@ -104,10 +118,20 @@ Table movie_writers {
   }
 }
 
+Table movie_directors {
+  id uuid [primary key]
+  movie_id uuid [not null]
+  person_id uuid [not null]
+  Indexes {
+    (movie_id, person_id) [unique]
+  }
+}
+
 Table movie_images {
   id uuid [primary key]
   movie_id uuid [not null]
   image_url varchar(255) [not null]
+  is_cover boolean [default: false]
 }
 
 Table cities {
@@ -131,12 +155,18 @@ Table halls {
   name varchar(50) [not null]
 }
 
-Table seats {
+Table seat_templates {
   id uuid [primary key]
-  hall_id uuid [not null]
   row_num varchar(10) [not null]
   seat_num varchar(10) [not null]
   type SeatType [default: 'REGULAR']
+  Indexes {
+    (row_num, seat_num) [unique]
+  }
+}
+
+Table seat_prices {
+  seat_type SeatType [primary key]
   price decimal [not null]
 }
 
@@ -145,32 +175,56 @@ Table projections {
   movie_id uuid [not null]
   hall_id uuid [not null]
   start_time timestamp [not null]
+  end_time timestamp [not null]
   created_at timestamp [default: `now()`]
   Indexes {
     (hall_id, start_time) [unique]
   }
 }
 
-Table reservations {
+Table bookings {
   id uuid [primary key]
   user_id uuid [not null]
   projection_id uuid [not null]
-  status ReservationStatus [default: 'PENDING']
+  status BookingStatus [default: 'HOLD']
   total_price decimal [not null]
   expires_at timestamp [not null]
   is_reminder_enabled boolean [default: false]
   created_at timestamp [default: `now()`]
 }
 
-Table reservation_seats {
+Table booking_seats {
   id uuid [primary key]
-  reservation_id uuid [not null]
-  seat_id uuid [not null]
+  booking_id uuid [not null]
+  seat_template_id uuid [not null]
   projection_id uuid [not null]
+  price_snapshot decimal [not null]
+  is_active boolean [default: true]
   Indexes {
-    (reservation_id, seat_id) [unique]
-    (projection_id, seat_id) [unique]
+    (booking_id, seat_template_id) [unique]
   }
+}
+
+Table user_payment_methods {
+  id uuid [primary key]
+  user_id uuid [not null]
+  stripe_payment_method_id varchar(255) [unique, not null]
+  card_brand varchar(50) [not null]
+  last_four varchar(4) [not null]
+  exp_month int [not null]
+  exp_year int [not null]
+  created_at timestamp [default: `now()`]
+}
+
+Table payments {
+  id uuid [primary key]
+  booking_id uuid [not null]
+  stripe_session_id varchar(255) [unique]
+  amount decimal [not null]
+  currency varchar(10) [default: 'BAM']
+  status PaymentStatus [default: 'PENDING']
+  paid_at timestamp
+  created_at timestamp [default: `now()`]
 }
 
 Table notifications {
@@ -184,7 +238,7 @@ Table notifications {
 }
 
 Ref: users.city_id > cities.id
-Ref: password_reset_codes.user_id > users.id
+Ref: verification_codes.user_id > users.id
 
 Ref: movie_genres.movie_id > movies.id
 Ref: movie_genres.genre_id > genres.id
@@ -195,20 +249,27 @@ Ref: movie_cast.person_id > people.id
 Ref: movie_writers.movie_id > movies.id
 Ref: movie_writers.person_id > people.id
 
+Ref: movie_directors.movie_id > movies.id
+Ref: movie_directors.person_id > people.id
+
 Ref: movie_images.movie_id > movies.id
 
 Ref: venues.city_id > cities.id
 Ref: halls.venue_id > venues.id
-Ref: seats.hall_id > halls.id
+
+Ref: seat_templates.type > seat_prices.seat_type
 
 Ref: projections.movie_id > movies.id
 Ref: projections.hall_id > halls.id
 
-Ref: reservations.user_id > users.id
-Ref: reservations.projection_id > projections.id
+Ref: bookings.user_id > users.id
+Ref: bookings.projection_id > projections.id
 
-Ref: reservation_seats.reservation_id > reservations.id
-Ref: reservation_seats.seat_id > seats.id
-Ref: reservation_seats.projection_id > projections.id
+Ref: booking_seats.booking_id > bookings.id
+Ref: booking_seats.seat_template_id > seat_templates.id
+Ref: booking_seats.projection_id > projections.id
 
 Ref: notifications.user_id > users.id
+
+Ref: user_payment_methods.user_id > users.id
+Ref: payments.booking_id > bookings.id
