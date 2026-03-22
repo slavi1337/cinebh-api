@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cinebh
+    username: cinebh_app
+    password: cinebh123
+  jpa:
+    show-sql: true
