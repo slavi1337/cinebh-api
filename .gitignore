@@ -35,10 +35,6 @@ build/
 *.log
 logs/
 
-# Local Environment variables
-.env
-.env.local
-
 # Operating System Files
 .DS_Store
 Thumbs.db

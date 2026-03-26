@@ -2,7 +2,7 @@ spring:
   application:
     name: cinebh-api
   profiles:
-    active: dev
+    active: local
   jpa:
     hibernate:
       ddl-auto: validate
