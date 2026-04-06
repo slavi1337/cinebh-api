@@ -6,12 +6,16 @@ import com.cinebh.api.dto.movie.HeroMovieResponse;
 import com.cinebh.api.dto.movie.MovieCardResponse;
 import com.cinebh.api.services.MovieService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,17 +31,33 @@ public class MovieController {
     private final MovieService movieService;
 
     @GetMapping("/hero")
-    @Operation(summary = "Get hero movies", description = "Returns 3 random currently showing movies for homepage hero section")
+    @Operation(
+            summary = "Get hero movies",
+            description = "Returns 3 random currently showing movies for homepage hero section"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Hero movies fetched successfully"),
+            @ApiResponse(responseCode = "500", description = "Unexpected server error")
+    })
     public ResponseEntity<List<HeroMovieResponse>> getHeroMovies() {
         return ResponseEntity.ok(movieService.getHeroMovies());
     }
 
     @GetMapping("/currently-showing")
-    @Operation(summary = "Get currently showing movies", description = "Returns paginated currently showing movies")
+    @Operation(
+            summary = "Get currently showing movies",
+            description = "Returns paginated currently showing movies"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Currently showing movies fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid pagination parameters"),
+            @ApiResponse(responseCode = "500", description = "Unexpected server error")
+    })
     public ResponseEntity<PageResponse<MovieCardResponse>> getCurrentlyShowing(
-            @Valid PaginationRequest paginationRequest
+            @Valid @ModelAttribute @ParameterObject PaginationRequest paginationRequest
     ) {
-        return ResponseEntity.ok(movieService.getCurrentlyShowing(
+        return ResponseEntity.ok(
+                movieService.getCurrentlyShowing(
                         paginationRequest.page(),
                         paginationRequest.size()
                 )
@@ -45,11 +65,23 @@ public class MovieController {
     }
 
     @GetMapping("/upcoming")
-    @Operation(summary = "Get upcoming movies", description = "Returns paginated upcoming movies")
+    @Operation(
+            summary = "Get upcoming movies",
+            description = "Returns paginated upcoming movies"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Upcoming movies fetched successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid pagination parameters"),
+            @ApiResponse(responseCode = "500", description = "Unexpected server error")
+    })
     public ResponseEntity<PageResponse<MovieCardResponse>> getUpcomingMovies(
-            @Valid PaginationRequest paginationRequest
+            @Valid @ModelAttribute @ParameterObject PaginationRequest paginationRequest
     ) {
-        return ResponseEntity.ok(movieService.getUpcomingMovies(paginationRequest.page(),
-                paginationRequest.size()));
+        return ResponseEntity.ok(
+                movieService.getUpcomingMovies(
+                        paginationRequest.page(),
+                        paginationRequest.size()
+                )
+        );
     }
 }
