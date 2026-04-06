@@ -15,24 +15,19 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 @Entity
-@Table(name = "venues")
-public class Venue {
+@Table(name = "movie_images")
+public class MovieImage {
 
     @Id
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "city_id", nullable = false)
-    private City city;
+    @JoinColumn(name = "movie_id", nullable = false)
+    private Movie movie;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(name = "street_address", nullable = false)
-    private String streetAddress;
-
-    private String phone;
-
-    @Column(name = "image_url")
+    @Column(name = "image_url", nullable = false)
     private String imageUrl;
+
+    @Column(name = "is_cover")
+    private Boolean isCover;
 }

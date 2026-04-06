@@ -1,6 +1,5 @@
 package com.cinebh.api.entities;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
@@ -15,24 +14,17 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 @Entity
-@Table(name = "venues")
-public class Venue {
+@Table(name = "movie_genres")
+public class MovieGenre {
 
     @Id
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "city_id", nullable = false)
-    private City city;
+    @JoinColumn(name = "movie_id", nullable = false)
+    private Movie movie;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(name = "street_address", nullable = false)
-    private String streetAddress;
-
-    private String phone;
-
-    @Column(name = "image_url")
-    private String imageUrl;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "genre_id", nullable = false)
+    private Genre genre;
 }
