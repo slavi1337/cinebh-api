@@ -6,6 +6,7 @@ import com.cinebh.api.dto.movie.MovieCardResponse;
 import com.cinebh.api.repositories.MovieRepository;
 import com.cinebh.api.repositories.projections.HeroMovieProjection;
 import com.cinebh.api.repositories.projections.MovieCardProjection;
+import com.cinebh.api.utils.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,10 +22,6 @@ import java.util.stream.Stream;
 @Transactional(readOnly = true)
 public class MovieService {
 
-    private static final int DEFAULT_PAGE = 0;
-    private static final int DEFAULT_SIZE = 10;
-    private static final int MAX_SIZE = 50;
-
     private final MovieRepository movieRepository;
 
     public List<HeroMovieResponse> getHeroMovies() {
@@ -35,41 +32,27 @@ public class MovieService {
     }
 
     public PageResponse<MovieCardResponse> getCurrentlyShowing(Integer page, Integer size) {
-        int resolvedPage = normalizePage(page);
-        int resolvedSize = normalizeSize(size);
 
-        Page<MovieCardProjection> result = movieRepository.findCurrentlyShowing(
-                PageRequest.of(resolvedPage, resolvedSize)
+        final Page<MovieCardProjection> result = movieRepository.findCurrentlyShowing(
+                PageRequest.of(
+                        PaginationUtils.normalizePage(page),
+                        PaginationUtils.normalizeSize(size)
+                )
         );
 
         return mapMoviePage(result);
     }
 
     public PageResponse<MovieCardResponse> getUpcomingMovies(Integer page, Integer size) {
-        int resolvedPage = normalizePage(page);
-        int resolvedSize = normalizeSize(size);
 
-        Page<MovieCardProjection> result = movieRepository.findUpcomingMovies(
-                PageRequest.of(resolvedPage, resolvedSize)
+        final Page<MovieCardProjection> result = movieRepository.findUpcomingMovies(
+                PageRequest.of(
+                        PaginationUtils.normalizePage(page),
+                        PaginationUtils.normalizeSize(size)
+                )
         );
 
         return mapMoviePage(result);
-    }
-
-    private int normalizePage(Integer page) {
-        if (page == null || page < 0) {
-            return DEFAULT_PAGE;
-        }
-
-        return page;
-    }
-
-    private int normalizeSize(Integer size) {
-        if (size == null || size < 1) {
-            return DEFAULT_SIZE;
-        }
-
-        return Math.min(size, MAX_SIZE);
     }
 
     private HeroMovieResponse mapHeroMovie(HeroMovieProjection projection) {
@@ -120,7 +103,7 @@ public class MovieService {
 
     private String normalizeGenreLabel(String genresCsv) {
         if (genresCsv == null || genresCsv.isBlank()) {
-            return "N/A";
+            return null;
         }
 
         return genresCsv;
