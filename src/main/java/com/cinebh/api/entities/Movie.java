@@ -34,10 +34,22 @@ public class Movie {
     @Column(name = "duration_minutes")
     private Integer durationMinutes;
 
+    @Column(name = "pg_rating")
+    private String pgRating;
+
+    @Column(name = "language")
+    private String language;
+
+    @Column(name = "trailer_url")
+    private String trailerUrl;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false, columnDefinition = "movie_status")
     private MovieStatus status;
+
+    @Column(name = "draft_step")
+    private Integer draftStep;
 
     @Column(name = "release_date")
     private LocalDate releaseDate;
