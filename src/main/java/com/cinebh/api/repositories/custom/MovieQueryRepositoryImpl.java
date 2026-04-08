@@ -18,7 +18,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -49,7 +48,7 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
                 .fetch();
 
         if (movieIds.isEmpty()) {
-            return Collections.emptyList();
+            return List.of();
         }
 
         return mapHeroMovies(movieIds);
@@ -75,7 +74,7 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
                 .fetch();
 
         final List<MovieCardResponse> items = movieIds.isEmpty()
-                ? Collections.emptyList()
+                ? List.of()
                 : mapMovieCards(movieIds);
 
         return new PageResponse<>(
@@ -107,7 +106,7 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
                 .fetch();
 
         final List<MovieCardResponse> items = movieIds.isEmpty()
-                ? Collections.emptyList()
+                ? List.of()
                 : mapMovieCards(movieIds);
 
         return new PageResponse<>(

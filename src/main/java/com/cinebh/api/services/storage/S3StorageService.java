@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.UUID;
 
 @Service
@@ -27,22 +28,22 @@ public class S3StorageService implements StorageService {
             throw new ApiException("File must not be empty", HttpStatus.BAD_REQUEST);
         }
 
-        try {
-            final String originalFilename = StringUtils.cleanPath(
-                    file.getOriginalFilename() == null ? "file" : file.getOriginalFilename()
-            );
+        final String originalFilename = StringUtils.cleanPath(
+                file.getOriginalFilename() == null ? "file" : file.getOriginalFilename()
+        );
 
-            final String objectKey = directory + "/" + UUID.randomUUID() + "-" + originalFilename;
+        final String objectKey = directory + "/" + UUID.randomUUID() + "-" + originalFilename;
 
-            final PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(storageProperties.getBucket())
-                    .key(objectKey)
-                    .contentType(file.getContentType())
-                    .build();
+        final PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(storageProperties.getBucket())
+                .key(objectKey)
+                .contentType(file.getContentType())
+                .build();
 
+        try (InputStream inputStream = file.getInputStream()) {
             s3Client.putObject(
                     putObjectRequest,
-                    RequestBody.fromBytes(file.getBytes())
+                    RequestBody.fromInputStream(inputStream, file.getSize())
             );
 
             return objectKey;

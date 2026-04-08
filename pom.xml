@@ -97,6 +97,17 @@
             <artifactId>s3</artifactId>
             <version>${aws.sdk.s3.version}</version>
         </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache5-client</artifactId>
+            <version>${aws.sdk.s3.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>retries</artifactId>
+            <version>${aws.sdk.s3.version}</version>
+        </dependency>
 
         <!-- Security / JWT -->
         <dependency>
