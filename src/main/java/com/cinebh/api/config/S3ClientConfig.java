@@ -6,9 +6,9 @@ import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.http.apache5.Apache5HttpClient;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.retries.StandardRetryStrategy;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -24,11 +24,7 @@ public class S3ClientConfig {
         final ClientOverrideConfiguration overrideConfiguration = ClientOverrideConfiguration.builder()
                 .apiCallTimeout(Duration.ofSeconds(30))
                 .apiCallAttemptTimeout(Duration.ofSeconds(10))
-                .retryStrategy(
-                        StandardRetryStrategy.builder()
-                                .maxAttempts(3)
-                                .build()
-                )
+                .retryStrategy(RetryMode.STANDARD)
                 .build();
 
         final S3ClientBuilder builder = S3Client.builder()
