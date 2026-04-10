@@ -15,6 +15,7 @@ import com.cinebh.api.entities.QMovieImage;
 import com.cinebh.api.entities.QProjection;
 import com.cinebh.api.entities.QVenue;
 import com.cinebh.api.entities.enums.MovieStatus;
+import com.cinebh.api.utils.PaginationUtils;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -54,9 +55,9 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
 
     @Override
     public PageResponse<CurrentlyShowingMovieResponse> findCurrentlyShowing(
-            CurrentlyShowingSearchRequest searchRequest,
-            int page,
-            int size
+            final CurrentlyShowingSearchRequest searchRequest,
+            final int page,
+            final int size
     ) {
         final BooleanExpression predicate = buildPredicate(searchRequest);
 
@@ -94,7 +95,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                     page,
                     size,
                     totalElements,
-                    calculateTotalPages(totalElements, size)
+                    PaginationUtils.calculateTotalPages(totalElements, size)
             );
         }
 
@@ -105,7 +106,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                 page,
                 size,
                 totalElements,
-                calculateTotalPages(totalElements, size)
+                PaginationUtils.calculateTotalPages(totalElements, size)
         );
     }
 
@@ -145,7 +146,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
     }
 
     @Override
-    public List<FilterOptionResponse> findVenuesByCityIds(List<UUID> cityIds) {
+    public List<FilterOptionResponse> findVenuesByCityIds(final List<UUID> cityIds) {
         if (cityIds == null || cityIds.isEmpty()) {
             return queryFactory
                     .select(Projections.constructor(
@@ -172,8 +173,8 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
     }
 
     private List<CurrentlyShowingMovieResponse> mapCurrentlyShowingMovies(
-            List<UUID> movieIds,
-            CurrentlyShowingSearchRequest searchRequest
+            final List<UUID> movieIds,
+            final CurrentlyShowingSearchRequest searchRequest
     ) {
         final List<Tuple> rows = queryFactory
                 .select(
@@ -195,20 +196,13 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
 
         final Map<UUID, MovieAccumulator> accumulatorMap = new LinkedHashMap<>();
 
-        for (UUID movieId : movieIds) {
-            accumulatorMap.put(movieId, new MovieAccumulator());
-        }
-
-        for (Tuple row : rows) {
+        for (final Tuple row : rows) {
             final UUID movieId = row.get(movie.id);
             if (movieId == null) {
                 continue;
             }
 
-            final MovieAccumulator accumulator = accumulatorMap.get(movieId);
-            if (accumulator == null) {
-                continue;
-            }
+            final MovieAccumulator accumulator = accumulatorMap.computeIfAbsent(movieId, ignored -> new MovieAccumulator());
 
             accumulator.movieId = movieId;
             accumulator.title = row.get(movie.title);
@@ -229,7 +223,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
 
         final List<CurrentlyShowingMovieResponse> result = new ArrayList<>();
 
-        for (UUID movieId : movieIds) {
+        for (final UUID movieId : movieIds) {
             final MovieAccumulator accumulator = accumulatorMap.get(movieId);
             if (accumulator == null) {
                 continue;
@@ -252,8 +246,8 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
     }
 
     private Map<UUID, List<ProjectionTimeResponse>> getShowtimesByMovieIds(
-            List<UUID> movieIds,
-            CurrentlyShowingSearchRequest searchRequest
+            final List<UUID> movieIds,
+            final CurrentlyShowingSearchRequest searchRequest
     ) {
         final BooleanExpression showtimePredicate = buildPredicate(searchRequest)
                 .and(movie.id.in(movieIds));
@@ -280,7 +274,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
 
         final Map<UUID, List<ProjectionTimeResponse>> result = new LinkedHashMap<>();
 
-        for (Tuple row : rows) {
+        for (final Tuple row : rows) {
             final UUID movieId = row.get(movie.id);
             if (movieId == null) {
                 continue;
@@ -306,7 +300,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
         return result;
     }
 
-    private BooleanExpression buildPredicate(CurrentlyShowingSearchRequest searchRequest) {
+    private BooleanExpression buildPredicate(final CurrentlyShowingSearchRequest searchRequest) {
         BooleanExpression predicate = movie.status.eq(MovieStatus.PUBLISHED)
                 .and(isSelectedDate(searchRequest.date()))
                 .and(isWithinMovieWindow(searchRequest.date()));
@@ -334,12 +328,12 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
         return predicate;
     }
 
-    private BooleanExpression isWithinMovieWindow(LocalDate date) {
+    private BooleanExpression isWithinMovieWindow(final LocalDate date) {
         return movie.releaseDate.loe(date)
                 .and(movie.endDate.isNull().or(movie.endDate.goe(date)));
     }
 
-    private BooleanExpression isSelectedDate(LocalDate date) {
+    private BooleanExpression isSelectedDate(final LocalDate date) {
         final DateTemplate<LocalDate> projectionDate = Expressions.dateTemplate(
                 LocalDate.class,
                 "DATE({0})",
@@ -349,7 +343,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
         return projectionDate.eq(date);
     }
 
-    private BooleanExpression hasProjectionTimes(List<LocalTime> projectionTimes) {
+    private BooleanExpression hasProjectionTimes(final List<LocalTime> projectionTimes) {
         final TimeTemplate<LocalTime> projectionTimeOnly = Expressions.timeTemplate(
                 LocalTime.class,
                 "CAST({0} AS time)",
@@ -357,14 +351,6 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
         );
 
         return projectionTimeOnly.in(projectionTimes);
-    }
-
-    private int calculateTotalPages(long totalElements, int size) {
-        if (size <= 0) {
-            return 0;
-        }
-
-        return (int) Math.ceil((double) totalElements / size);
     }
 
     private static class MovieAccumulator {

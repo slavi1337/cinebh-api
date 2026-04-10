@@ -4,6 +4,7 @@ import com.cinebh.api.dto.common.PageResponse;
 import com.cinebh.api.dto.venue.VenueCardResponse;
 import com.cinebh.api.entities.QCity;
 import com.cinebh.api.entities.QVenue;
+import com.cinebh.api.utils.PaginationUtils;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -23,7 +24,7 @@ public class VenueQueryRepositoryImpl implements VenueQueryRepository {
     private final QCity city = QCity.city;
 
     @Override
-    public PageResponse<VenueCardResponse> findHomepageVenues(int page, int size) {
+    public PageResponse<VenueCardResponse> findHomepageVenues(final int page, final int size) {
         final long totalElements = Optional.ofNullable(
                 queryFactory
                         .select(venue.count())
@@ -57,15 +58,7 @@ public class VenueQueryRepositoryImpl implements VenueQueryRepository {
                 page,
                 size,
                 totalElements,
-                calculateTotalPages(totalElements, size)
+                PaginationUtils.calculateTotalPages(totalElements, size)
         );
-    }
-
-    private int calculateTotalPages(long totalElements, int size) {
-        if (size <= 0) {
-            return 0;
-        }
-
-        return (int) Math.ceil((double) totalElements / size);
     }
 }

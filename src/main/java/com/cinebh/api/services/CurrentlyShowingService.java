@@ -22,9 +22,9 @@ public class CurrentlyShowingService {
     private final CurrentlyShowingRepository currentlyShowingRepository;
 
     public PageResponse<CurrentlyShowingMovieResponse> getCurrentlyShowing(
-            CurrentlyShowingSearchRequest searchRequest,
-            Integer page,
-            Integer size
+            final CurrentlyShowingSearchRequest searchRequest,
+            final Integer page,
+            final Integer size
     ) {
         return currentlyShowingRepository.findCurrentlyShowing(
                 searchRequest,
@@ -37,7 +37,7 @@ public class CurrentlyShowingService {
         return currentlyShowingRepository.findFilters();
     }
 
-    public List<FilterOptionResponse> getVenuesByCities(List<UUID> cityIds) {
+    public List<FilterOptionResponse> getVenuesByCities(final List<UUID> cityIds) {
         return currentlyShowingRepository.findVenuesByCityIds(cityIds);
     }
 }

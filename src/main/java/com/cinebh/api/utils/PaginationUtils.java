@@ -10,7 +10,7 @@ public final class PaginationUtils {
         throw new UnsupportedOperationException("Utility class");
     }
 
-    public static int normalizePage(Integer page) {
+    public static int normalizePage(final Integer page) {
         if (page == null || page < 0) {
             return DEFAULT_PAGE;
         }
@@ -18,11 +18,15 @@ public final class PaginationUtils {
         return page;
     }
 
-    public static int normalizeSize(Integer size) {
+    public static int normalizeSize(final Integer size) {
         if (size == null || size < 1) {
             return DEFAULT_SIZE;
         }
 
         return Math.min(size, MAX_SIZE);
+    }
+
+    public static int calculateTotalPages(final long totalElements, final int size) {
+        return size <= 0 ? 0 : (int) Math.ceil((double) totalElements / size);
     }
 }
