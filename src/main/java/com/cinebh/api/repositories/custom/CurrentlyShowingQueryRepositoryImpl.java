@@ -19,9 +19,6 @@ import com.cinebh.api.utils.PaginationUtils;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.DateTemplate;
-import com.querydsl.core.types.dsl.Expressions;
-import com.querydsl.core.types.dsl.TimeTemplate;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -29,6 +26,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -41,6 +39,8 @@ import java.util.UUID;
 @Repository
 @RequiredArgsConstructor
 public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQueryRepository {
+
+    private static final ZoneId CINEMA_ZONE = ZoneId.of("Europe/Sarajevo");
 
     private final JPAQueryFactory queryFactory;
 
@@ -202,7 +202,8 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                 continue;
             }
 
-            final MovieAccumulator accumulator = accumulatorMap.computeIfAbsent(movieId, ignored -> new MovieAccumulator());
+            final MovieAccumulator accumulator =
+                    accumulatorMap.computeIfAbsent(movieId, ignored -> new MovieAccumulator());
 
             accumulator.movieId = movieId;
             accumulator.title = row.get(movie.title);
@@ -273,10 +274,13 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                 .fetch();
 
         final Map<UUID, List<ProjectionTimeResponse>> result = new LinkedHashMap<>();
+        final Set<UUID> seenProjectionIds = new LinkedHashSet<>();
 
         for (final Tuple row : rows) {
             final UUID movieId = row.get(movie.id);
-            if (movieId == null) {
+            final UUID projectionId = row.get(projection.id);
+
+            if (movieId == null || projectionId == null || seenProjectionIds.contains(projectionId)) {
                 continue;
             }
 
@@ -285,9 +289,11 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                 continue;
             }
 
+            seenProjectionIds.add(projectionId);
+
             final ProjectionTimeResponse showtime = new ProjectionTimeResponse(
-                    row.get(projection.id),
-                    projectionStartTime.toLocalTime(),
+                    projectionId,
+                    projectionStartTime.atZoneSameInstant(CINEMA_ZONE).toLocalTime(),
                     row.get(venue.id),
                     row.get(venue.name),
                     row.get(city.id),
@@ -322,7 +328,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
         }
 
         if (searchRequest.projectionTimes() != null && !searchRequest.projectionTimes().isEmpty()) {
-            predicate = predicate.and(hasProjectionTimes(searchRequest.projectionTimes()));
+            predicate = predicate.and(hasProjectionTimes(searchRequest.date(), searchRequest.projectionTimes()));
         }
 
         return predicate;
@@ -334,23 +340,28 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
     }
 
     private BooleanExpression isSelectedDate(final LocalDate date) {
-        final DateTemplate<LocalDate> projectionDate = Expressions.dateTemplate(
-                LocalDate.class,
-                "DATE({0})",
-                projection.startTime
-        );
+        final OffsetDateTime startOfDay = date.atStartOfDay(CINEMA_ZONE).toOffsetDateTime();
+        final OffsetDateTime endOfDay = date.plusDays(1).atStartOfDay(CINEMA_ZONE).toOffsetDateTime();
 
-        return projectionDate.eq(date);
+        return projection.startTime.goe(startOfDay)
+                .and(projection.startTime.lt(endOfDay));
     }
 
-    private BooleanExpression hasProjectionTimes(final List<LocalTime> projectionTimes) {
-        final TimeTemplate<LocalTime> projectionTimeOnly = Expressions.timeTemplate(
-                LocalTime.class,
-                "CAST({0} AS time)",
-                projection.startTime
-        );
+    private BooleanExpression hasProjectionTimes(
+            final LocalDate date,
+            final List<LocalTime> projectionTimes
+    ) {
+        BooleanExpression predicate = null;
 
-        return projectionTimeOnly.in(projectionTimes);
+        for (final LocalTime projectionTime : projectionTimes) {
+            final OffsetDateTime selectedDateTime =
+                    date.atTime(projectionTime).atZone(CINEMA_ZONE).toOffsetDateTime();
+
+            final BooleanExpression timePredicate = projection.startTime.eq(selectedDateTime);
+            predicate = predicate == null ? timePredicate : predicate.or(timePredicate);
+        }
+
+        return predicate;
     }
 
     private static class MovieAccumulator {
