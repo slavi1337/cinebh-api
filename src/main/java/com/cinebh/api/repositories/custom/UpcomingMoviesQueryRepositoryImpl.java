@@ -133,10 +133,9 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
 
     @Override
     public List<UpcomingFilterOptionResponse> findVenuesByCityIds(final List<UUID> cityIds) {
-        final BooleanExpression basePredicate = baseUpcomingPredicate();
         final BooleanExpression predicate = cityIds == null || cityIds.isEmpty()
-                ? basePredicate
-                : basePredicate.and(city.id.in(cityIds));
+                ? baseUpcomingPredicate()
+                : baseUpcomingPredicate().and(city.id.in(cityIds));
 
         return findUpcomingVenueOptions(predicate);
     }
