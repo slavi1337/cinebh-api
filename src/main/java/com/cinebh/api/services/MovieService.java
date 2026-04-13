@@ -22,14 +22,14 @@ public class MovieService {
         return movieRepository.findHeroMovies();
     }
 
-    public PageResponse<MovieCardResponse> getCurrentlyShowing(Integer page, Integer size) {
+    public PageResponse<MovieCardResponse> getCurrentlyShowing(final Integer page, final Integer size) {
         return movieRepository.findCurrentlyShowing(
                 PaginationUtils.normalizePage(page),
                 PaginationUtils.normalizeSize(size)
         );
     }
 
-    public PageResponse<MovieCardResponse> getUpcomingMovies(Integer page, Integer size) {
+    public PageResponse<MovieCardResponse> getUpcomingMovies(final Integer page, final Integer size) {
         return movieRepository.findUpcomingMovies(
                 PaginationUtils.normalizePage(page),
                 PaginationUtils.normalizeSize(size)

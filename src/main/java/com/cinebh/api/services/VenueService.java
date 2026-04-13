@@ -15,7 +15,7 @@ public class VenueService {
 
     private final VenueRepository venueRepository;
 
-    public PageResponse<VenueCardResponse> getVenues(Integer page, Integer size) {
+    public PageResponse<VenueCardResponse> getVenues(final Integer page, final Integer size) {
         return venueRepository.findHomepageVenues(
                 PaginationUtils.normalizePage(page),
                 PaginationUtils.normalizeSize(size)

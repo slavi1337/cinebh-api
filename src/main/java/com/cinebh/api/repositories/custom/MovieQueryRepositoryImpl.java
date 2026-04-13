@@ -8,6 +8,7 @@ import com.cinebh.api.entities.QMovie;
 import com.cinebh.api.entities.QMovieGenre;
 import com.cinebh.api.entities.QMovieImage;
 import com.cinebh.api.entities.enums.MovieStatus;
+import com.cinebh.api.utils.PaginationUtils;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -55,7 +56,7 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
     }
 
     @Override
-    public PageResponse<MovieCardResponse> findCurrentlyShowing(int page, int size) {
+    public PageResponse<MovieCardResponse> findCurrentlyShowing(final int page, final int size) {
         final long totalElements = Optional.ofNullable(
                 queryFactory
                         .select(movie.count())
@@ -82,12 +83,12 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
                 page,
                 size,
                 totalElements,
-                calculateTotalPages(totalElements, size)
+                PaginationUtils.calculateTotalPages(totalElements, size)
         );
     }
 
     @Override
-    public PageResponse<MovieCardResponse> findUpcomingMovies(int page, int size) {
+    public PageResponse<MovieCardResponse> findUpcomingMovies(final int page, final int size) {
         final long totalElements = Optional.ofNullable(
                 queryFactory
                         .select(movie.count())
@@ -114,11 +115,11 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
                 page,
                 size,
                 totalElements,
-                calculateTotalPages(totalElements, size)
+                PaginationUtils.calculateTotalPages(totalElements, size)
         );
     }
 
-    private List<HeroMovieResponse> mapHeroMovies(List<UUID> movieIds) {
+    private List<HeroMovieResponse> mapHeroMovies(final List<UUID> movieIds) {
         final List<Tuple> rows = queryFactory
                 .select(
                         movie.id,
@@ -136,20 +137,13 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
 
         final Map<UUID, HeroAccumulator> accumulatorMap = new LinkedHashMap<>();
 
-        for (UUID movieId : movieIds) {
-            accumulatorMap.put(movieId, new HeroAccumulator());
-        }
-
-        for (Tuple row : rows) {
+        for (final Tuple row : rows) {
             final UUID movieId = row.get(movie.id);
             if (movieId == null) {
                 continue;
             }
 
-            final HeroAccumulator accumulator = accumulatorMap.get(movieId);
-            if (accumulator == null) {
-                continue;
-            }
+            final HeroAccumulator accumulator = accumulatorMap.computeIfAbsent(movieId, ignored -> new HeroAccumulator());
 
             accumulator.id = movieId;
             accumulator.title = row.get(movie.title);
@@ -164,7 +158,7 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
 
         final List<HeroMovieResponse> result = new ArrayList<>();
 
-        for (UUID movieId : movieIds) {
+        for (final UUID movieId : movieIds) {
             final HeroAccumulator accumulator = accumulatorMap.get(movieId);
             if (accumulator == null) {
                 continue;
@@ -182,7 +176,7 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
         return result;
     }
 
-    private List<MovieCardResponse> mapMovieCards(List<UUID> movieIds) {
+    private List<MovieCardResponse> mapMovieCards(final List<UUID> movieIds) {
         final List<Tuple> rows = queryFactory
                 .select(
                         movie.id,
@@ -200,20 +194,13 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
 
         final Map<UUID, MovieCardAccumulator> accumulatorMap = new LinkedHashMap<>();
 
-        for (UUID movieId : movieIds) {
-            accumulatorMap.put(movieId, new MovieCardAccumulator());
-        }
-
-        for (Tuple row : rows) {
+        for (final Tuple row : rows) {
             final UUID movieId = row.get(movie.id);
             if (movieId == null) {
                 continue;
             }
 
-            final MovieCardAccumulator accumulator = accumulatorMap.get(movieId);
-            if (accumulator == null) {
-                continue;
-            }
+            final MovieCardAccumulator accumulator = accumulatorMap.computeIfAbsent(movieId, ignored -> new MovieCardAccumulator());
 
             accumulator.id = movieId;
             accumulator.title = row.get(movie.title);
@@ -228,7 +215,7 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
 
         final List<MovieCardResponse> result = new ArrayList<>();
 
-        for (UUID movieId : movieIds) {
+        for (final UUID movieId : movieIds) {
             final MovieCardAccumulator accumulator = accumulatorMap.get(movieId);
             if (accumulator == null) {
                 continue;
@@ -259,14 +246,6 @@ public class MovieQueryRepositoryImpl implements MovieQueryRepository {
 
     private OrderSpecifier<Double> randomOrder() {
         return Expressions.numberTemplate(Double.class, "function('random')").asc();
-    }
-
-    private int calculateTotalPages(long totalElements, int size) {
-        if (size <= 0) {
-            return 0;
-        }
-
-        return (int) Math.ceil((double) totalElements / size);
     }
 
     private static class HeroAccumulator {
