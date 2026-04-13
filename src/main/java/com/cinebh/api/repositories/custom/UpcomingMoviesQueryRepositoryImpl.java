@@ -112,17 +112,7 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
                 .orderBy(city.name.asc())
                 .fetch();
 
-        final List<UpcomingFilterOptionResponse> venues = applyProjectionVenueCityGraph(
-                queryFactory.select(Projections.constructor(
-                        UpcomingFilterOptionResponse.class,
-                        venue.id,
-                        venue.name
-                ))
-        )
-                .where(predicate)
-                .groupBy(venue.id, venue.name)
-                .orderBy(venue.name.asc())
-                .fetch();
+        final List<UpcomingFilterOptionResponse> venues = findUpcomingVenueOptions(predicate);
 
         final List<UpcomingFilterOptionResponse> genres = applyProjectionVenueCityGraph(
                 queryFactory.select(Projections.constructor(
@@ -143,22 +133,17 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
 
     @Override
     public List<UpcomingFilterOptionResponse> findVenuesByCityIds(final List<UUID> cityIds) {
-        final BooleanExpression predicate = baseUpcomingPredicate();
+        final BooleanExpression basePredicate = baseUpcomingPredicate();
+        final BooleanExpression predicate = cityIds == null || cityIds.isEmpty()
+                ? basePredicate
+                : basePredicate.and(city.id.in(cityIds));
 
-        if (cityIds == null || cityIds.isEmpty()) {
-            return applyProjectionVenueCityGraph(
-                    queryFactory.select(Projections.constructor(
-                            UpcomingFilterOptionResponse.class,
-                            venue.id,
-                            venue.name
-                    ))
-            )
-                    .where(predicate)
-                    .groupBy(venue.id, venue.name)
-                    .orderBy(venue.name.asc())
-                    .fetch();
-        }
+        return findUpcomingVenueOptions(predicate);
+    }
 
+    private List<UpcomingFilterOptionResponse> findUpcomingVenueOptions(
+            final BooleanExpression predicate
+    ) {
         return applyProjectionVenueCityGraph(
                 queryFactory.select(Projections.constructor(
                         UpcomingFilterOptionResponse.class,
@@ -166,7 +151,7 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
                         venue.name
                 ))
         )
-                .where(predicate.and(city.id.in(cityIds)))
+                .where(predicate)
                 .groupBy(venue.id, venue.name)
                 .orderBy(venue.name.asc())
                 .fetch();
