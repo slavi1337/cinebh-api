@@ -19,6 +19,7 @@ import com.cinebh.api.utils.PaginationUtils;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -62,25 +63,13 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
         final BooleanExpression predicate = buildPredicate(searchRequest);
 
         final long totalElements = Optional.ofNullable(
-                queryFactory
-                        .select(movie.id.countDistinct())
-                        .from(projection)
-                        .join(projection.movie, movie)
-                        .join(projection.hall, hall)
-                        .join(hall.venue, venue)
-                        .join(venue.city, city)
+                applyProjectionVenueCityGraph(queryFactory.select(movie.id.countDistinct()))
                         .leftJoin(movieGenre).on(movieGenre.movie.id.eq(movie.id))
                         .where(predicate)
                         .fetchOne()
         ).orElse(0L);
 
-        final List<UUID> movieIds = queryFactory
-                .select(movie.id)
-                .from(projection)
-                .join(projection.movie, movie)
-                .join(projection.hall, hall)
-                .join(hall.venue, venue)
-                .join(venue.city, city)
+        final List<UUID> movieIds = applyProjectionVenueCityGraph(queryFactory.select(movie.id))
                 .leftJoin(movieGenre).on(movieGenre.movie.id.eq(movie.id))
                 .where(predicate)
                 .groupBy(movie.id, movie.title)
@@ -253,8 +242,8 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
         final BooleanExpression showtimePredicate = buildPredicate(searchRequest)
                 .and(movie.id.in(movieIds));
 
-        final List<Tuple> rows = queryFactory
-                .select(
+        final List<Tuple> rows = applyProjectionVenueCityGraph(
+                queryFactory.select(
                         movie.id,
                         projection.id,
                         projection.startTime,
@@ -263,11 +252,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                         city.id,
                         city.name
                 )
-                .from(projection)
-                .join(projection.movie, movie)
-                .join(projection.hall, hall)
-                .join(hall.venue, venue)
-                .join(venue.city, city)
+        )
                 .leftJoin(movieGenre).on(movieGenre.movie.id.eq(movie.id))
                 .where(showtimePredicate)
                 .orderBy(projection.startTime.asc())
@@ -362,6 +347,14 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
         }
 
         return predicate;
+    }
+
+    private <T> JPAQuery<T> applyProjectionVenueCityGraph(final JPAQuery<T> query) {
+        return query.from(projection)
+                .join(projection.movie, movie)
+                .join(projection.hall, hall)
+                .join(hall.venue, venue)
+                .join(venue.city, city);
     }
 
     private static class MovieAccumulator {
