@@ -13,12 +13,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.junit.jupiter.params.provider.Arguments;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -33,16 +31,6 @@ class UpcomingMoviesServiceTest {
     @InjectMocks
     private UpcomingMoviesService upcomingMoviesService;
 
-    private static Stream<Arguments> paginationCases() {
-        return Stream.of(
-                Arguments.of(null, null, 0, 10),
-                Arguments.of(-1, 12, 0, 12),
-                Arguments.of(0, 0, 0, 10),
-                Arguments.of(2, 100, 2, 50),
-                Arguments.of(1, 15, 1, 15)
-        );
-    }
-
     private UpcomingMoviesSearchRequest buildSearchRequest() {
         return new UpcomingMoviesSearchRequest(
                 "dune",
@@ -55,7 +43,7 @@ class UpcomingMoviesServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("paginationCases")
+    @MethodSource("com.cinebh.api.support.TestPaginationCases#paginationCases")
     void shouldNormalizePaginationBeforeCallingRepository(
             final Integer inputPage,
             final Integer inputSize,

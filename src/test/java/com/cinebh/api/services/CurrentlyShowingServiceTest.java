@@ -35,16 +35,6 @@ class CurrentlyShowingServiceTest {
     @InjectMocks
     private CurrentlyShowingService currentlyShowingService;
 
-    private static Stream<Arguments> paginationCases() {
-        return Stream.of(
-                Arguments.of(null, null, 0, 10),
-                Arguments.of(-1, 12, 0, 12),
-                Arguments.of(0, 0, 0, 10),
-                Arguments.of(2, 100, 2, 50),
-                Arguments.of(1, 15, 1, 15)
-        );
-    }
-
     private CurrentlyShowingSearchRequest buildSearchRequest() {
         return new CurrentlyShowingSearchRequest(
                 "avatar",
@@ -57,7 +47,7 @@ class CurrentlyShowingServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("paginationCases")
+    @MethodSource("com.cinebh.api.support.TestPaginationCases#paginationCases")
     void shouldNormalizePaginationBeforeCallingRepository(
             final Integer inputPage,
             final Integer inputSize,

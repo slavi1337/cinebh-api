@@ -9,10 +9,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.junit.jupiter.params.provider.Arguments;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -27,18 +25,8 @@ class VenueServiceTest {
     @InjectMocks
     private VenueService venueService;
 
-    private static Stream<Arguments> paginationCases() {
-        return Stream.of(
-                Arguments.of(null, null, 0, 10),
-                Arguments.of(-1, 12, 0, 12),
-                Arguments.of(0, 0, 0, 10),
-                Arguments.of(2, 100, 2, 50),
-                Arguments.of(1, 15, 1, 15)
-        );
-    }
-
     @ParameterizedTest
-    @MethodSource("paginationCases")
+    @MethodSource("com.cinebh.api.support.TestPaginationCases#paginationCases")
     void shouldNormalizePaginationBeforeCallingRepository(
             final Integer inputPage,
             final Integer inputSize,

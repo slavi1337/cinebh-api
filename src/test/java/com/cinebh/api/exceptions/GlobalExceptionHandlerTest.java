@@ -102,7 +102,6 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().timestamp()).isNotNull();
     }
 
-    @SuppressWarnings("unused")
     private static class TestController {
         public void sampleMethod(final String value) {
         }

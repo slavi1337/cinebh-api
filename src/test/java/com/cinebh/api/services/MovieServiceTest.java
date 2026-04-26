@@ -30,16 +30,6 @@ class MovieServiceTest {
     @InjectMocks
     private MovieService movieService;
 
-    private static Stream<Arguments> paginationCases() {
-        return Stream.of(
-                Arguments.of(null, null, 0, 10),
-                Arguments.of(-1, 12, 0, 12),
-                Arguments.of(0, 0, 0, 10),
-                Arguments.of(2, 100, 2, 50),
-                Arguments.of(1, 15, 1, 15)
-        );
-    }
-
     @Test
     void shouldReturnHeroMoviesFromRepository() {
         final List<HeroMovieResponse> expectedResponse = List.of(
@@ -61,7 +51,7 @@ class MovieServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("paginationCases")
+    @MethodSource("com.cinebh.api.support.TestPaginationCases#paginationCases")
     void shouldNormalizePaginationWhenFetchingCurrentlyShowingMovies(
             final Integer inputPage,
             final Integer inputSize,
@@ -81,7 +71,7 @@ class MovieServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("paginationCases")
+    @MethodSource("com.cinebh.api.support.TestPaginationCases#paginationCases")
     void shouldNormalizePaginationWhenFetchingUpcomingMovies(
             final Integer inputPage,
             final Integer inputSize,
