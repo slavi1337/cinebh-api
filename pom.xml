@@ -23,6 +23,9 @@
         <aws.sdk.s3.version>2.42.28</aws.sdk.s3.version>
         <jakarta.persistence.version>3.2.0</jakarta.persistence.version>
         <jakarta.annotation.version>3.0.0</jakarta.annotation.version>
+        <jacoco.version>0.8.12</jacoco.version>
+
+        <jacoco.coverage.minimum>0.70</jacoco.coverage.minimum>
     </properties>
 
     <dependencies>
@@ -176,6 +179,59 @@
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                         </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>${jacoco.coverage.minimum}</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+
+                <configuration>
+                    <excludes>
+                        <exclude>**/dto/**</exclude>
+                        <exclude>**/entities/**</exclude>
+                        <exclude>**/config/**</exclude>
+                        <exclude>**/repositories/**</exclude>
+                        <exclude>**/*Application.class</exclude>
                     </excludes>
                 </configuration>
             </plugin>
