@@ -5,6 +5,17 @@ spring:
     password: cinebh123
   jpa:
     show-sql: true
+  mail:
+    host: mail.smtp2go.com
+    port: 2525
+    username: "atlantbhpraksa"
+    password: ${smtp2go.password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 app:
   storage:
@@ -15,3 +26,8 @@ app:
     secret-key: minioadmin
     public-base-url: http://localhost:9000/cinebh
     path-style-access-enabled: true
+  notification:
+    from-address: "slavisa.covakusic@student.etf.unibl.org"
+    from-name: "Cinebh"
+    verification-code-ttl-minutes: 15
+

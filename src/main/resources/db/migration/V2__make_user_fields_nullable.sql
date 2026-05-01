@@ -1,0 +1,12 @@
+ALTER TABLE users
+    ALTER COLUMN first_name DROP NOT NULL;
+ALTER TABLE users
+    ALTER COLUMN last_name DROP NOT NULL;
+ALTER TABLE users
+    ALTER COLUMN phone DROP NOT NULL;
+ALTER TABLE users
+    ALTER COLUMN profile_image_url DROP NOT NULL;
+ALTER TABLE users
+    ALTER COLUMN city_id DROP NOT NULL;
+ALTER TABLE users
+    ALTER COLUMN street_address DROP NOT NULL;
