@@ -1,6 +1,7 @@
 package com.cinebh.api.services;
 
 import com.cinebh.api.config.NotificationProperties;
+import com.cinebh.api.config.VerificationProperties;
 import com.cinebh.api.entities.User;
 import com.cinebh.api.entities.VerificationCode;
 import com.cinebh.api.entities.enums.VerificationCodeType;
@@ -35,7 +36,7 @@ class VerificationServiceImplTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private NotificationProperties notificationProperties;
+    private VerificationProperties verificationProperties;
 
     @InjectMocks
     private VerificationServiceImpl verificationService;
@@ -54,12 +55,13 @@ class VerificationServiceImplTest {
 
     @Test
     void shouldGenerateAndSaveCodeSuccessfully() {
-        when(notificationProperties.getVerificationCodeTtlMinutes()).thenReturn(15);
+        when(verificationProperties.getCodeLength()).thenReturn(8);
+        when(verificationProperties.getCodeTtlMinutes()).thenReturn(15);
         when(passwordEncoder.encode(any(String.class))).thenReturn("hashed-code");
 
         final String generatedCode = verificationService.generateAndSaveCode(testUser, VerificationCodeType.ACCOUNT_VERIFICATION);
 
-        assertThat(generatedCode).hasSize(6).matches("\\d+");
+        assertThat(generatedCode).hasSize(8).matches("\\d+");
 
         verify(verificationCodeRepository).invalidateAllPendingCodes(testUser.getId(), VerificationCodeType.ACCOUNT_VERIFICATION);
         verify(verificationCodeRepository).save(codeCaptor.capture());

@@ -29,5 +29,7 @@ app:
   notification:
     from-address: "slavisa.covakusic@student.etf.unibl.org"
     from-name: "Cinebh"
-    verification-code-ttl-minutes: 15
+  verification:
+    code-ttl-minutes: 15
+    code-length: 6
 

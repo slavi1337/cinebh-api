@@ -1,6 +1,6 @@
 package com.cinebh.api.services.impl;
 
-import com.cinebh.api.config.NotificationProperties;
+import com.cinebh.api.config.VerificationProperties;
 import com.cinebh.api.entities.User;
 import com.cinebh.api.entities.VerificationCode;
 import com.cinebh.api.entities.enums.VerificationCodeType;
@@ -21,11 +21,10 @@ import java.util.UUID;
 public class VerificationServiceImpl implements VerificationService {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final int CODE_LENGTH = 6;
 
     private final VerificationCodeRepository verificationCodeRepository;
     private final PasswordEncoder passwordEncoder;
-    private final NotificationProperties notificationProperties;
+    private final VerificationProperties verificationProperties;
 
     @Override
     @Transactional
@@ -42,7 +41,7 @@ public class VerificationServiceImpl implements VerificationService {
         code.setCodeHash(hashedCode);
         code.setIsUsed(false);
         code.setCreatedAt(OffsetDateTime.now());
-        code.setExpiresAt(OffsetDateTime.now().plusMinutes(notificationProperties.getVerificationCodeTtlMinutes()));
+        code.setExpiresAt(OffsetDateTime.now().plusMinutes(verificationProperties.getCodeTtlMinutes()));
 
         verificationCodeRepository.save(code);
 
@@ -77,8 +76,9 @@ public class VerificationServiceImpl implements VerificationService {
     }
 
     private String generateRandomDigits() {
-        final StringBuilder builder = new StringBuilder(CODE_LENGTH);
-        for (int i = 0; i < CODE_LENGTH; i++) {
+        final int length = verificationProperties.getCodeLength();
+        final StringBuilder builder = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
             builder.append(SECURE_RANDOM.nextInt(10));
         }
         return builder.toString();
