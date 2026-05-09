@@ -54,7 +54,7 @@ class AuthServiceImplTest {
         authService.register(request);
 
         final ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
+        verify(userRepository).saveAndFlush(userCaptor.capture());
 
         final User savedUser = userCaptor.getValue();
         assertThat(savedUser.getEmail()).isEqualTo("test@cinebh.com");
