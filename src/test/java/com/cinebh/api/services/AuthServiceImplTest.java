@@ -46,7 +46,7 @@ class AuthServiceImplTest {
     @Test
     void shouldRegisterUserSuccessfully() {
         final RegisterRequest request = new RegisterRequest("test@cinebh.com", "Password123");
-        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(request.password())).thenReturn("hashed-password");
         when(verificationService.generateAndSaveCode(any(User.class), eq(VerificationCodeType.ACCOUNT_VERIFICATION)))
                 .thenReturn("123456");
@@ -65,14 +65,31 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenEmailAlreadyExists() {
+    void shouldThrowExceptionWhenActiveEmailAlreadyExists() {
         final RegisterRequest request = new RegisterRequest("existing@cinebh.com", "Password123");
-        when(userRepository.existsByEmail(request.email())).thenReturn(true);
+        final User existingUser = new User();
+        existingUser.setIsActive(true);
+
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(existingUser));
 
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST)
                 .hasMessage("Email is already in use.");
+    }
+
+    @Test
+    void shouldThrowExceptionWithSpecificMessageWhenInactiveEmailExists() {
+        final RegisterRequest request = new RegisterRequest("inactive@cinebh.com", "Password123");
+        final User existingUser = new User();
+        existingUser.setIsActive(false);
+
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(existingUser));
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST)
+                .hasMessage("Account already exists but is not verified. Please proceed to login to receive a new verification code.");
     }
 
     @Test

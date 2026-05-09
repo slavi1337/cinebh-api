@@ -16,4 +16,9 @@ public record VerifyRequest(
         @Pattern(regexp = "^\\d{6}$", message = "Verification code must be 6 digits")
         String code
 ) {
+    public VerifyRequest {
+        if (email != null) {
+            email = email.trim().toLowerCase();
+        }
+    }
 }

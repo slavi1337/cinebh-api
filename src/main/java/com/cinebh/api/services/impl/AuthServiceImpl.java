@@ -31,19 +31,27 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void register(final RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new ApiException("Email is already in use.", HttpStatus.BAD_REQUEST);
-        }
+        userRepository.findByEmail(request.email()).ifPresent(existingUser -> {
+            if (Boolean.TRUE.equals(existingUser.getIsActive())) {
+                throw new ApiException("Email is already in use.", HttpStatus.BAD_REQUEST);
+            } else {
+                throw new ApiException("Account already exists but is not verified. Please proceed to login to receive a new verification code.", HttpStatus.BAD_REQUEST);
+            }
+        });
 
         final User user = new User();
         user.setId(UUID.randomUUID());
-        user.setEmail(request.email().trim().toLowerCase());
+        user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setRole(UserRole.CUSTOMER);
         user.setIsActive(false);
         user.setCreatedAt(OffsetDateTime.now());
 
-        userRepository.save(user);
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (org.springframework.dao.DataIntegrityViolationException exception) {
+            throw new ApiException("Email is already in use. If unverified, please proceed to login.", HttpStatus.BAD_REQUEST);
+        }
 
         final String code = verificationService.generateAndSaveCode(user, VerificationCodeType.ACCOUNT_VERIFICATION);
 
@@ -53,7 +61,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void verify(final VerifyRequest request) {
-        final User user = userRepository.findByEmail(request.email().trim().toLowerCase())
+        final User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ApiException("User not found.", HttpStatus.NOT_FOUND));
 
         if (Boolean.TRUE.equals(user.getIsActive())) {

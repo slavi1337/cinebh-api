@@ -27,4 +27,9 @@ public record RegisterRequest(
         @NotPwned
         String password
 ) {
+    public RegisterRequest {
+        if (email != null) {
+            email = email.trim().toLowerCase();
+        }
+    }
 }
