@@ -8,9 +8,9 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 @Setter
 @Configuration
-@ConfigurationProperties(prefix = "app.notification")
-public class NotificationProperties {
+@ConfigurationProperties(prefix = "app.verification")
+public class VerificationProperties {
 
-    private String fromAddress;
-    private String fromName;
+    private int codeTtlMinutes = 15;
+    private int codeLength = 6;
 }
