@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title}">Verification Code</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+<div style="max-width: 600px; background-color: #ffffff; padding: 30px; border-radius: 8px; margin: auto;">
+    <h2 style="color: #333;" th:text="${title}">Action Required</h2>
+    <p>Hi <strong th:text="${name}">User</strong>,</p>
+    <p>Please use the following verification code to proceed:</p>>
+    <div style="font-size: 24px; font-weight: bold; background-color: #f9f9f9; padding: 15px; text-align: center; border: 1px solid #ddd; letter-spacing: 5px; border-radius: 4px; margin: 20px 0;"
+         th:text="${code}">
+        000000
+    </div>
+    <p>This code will expire shortly. Do not share it with anyone.</p>
+    <br>
+    <p>Best regards,<br>The Cinebh Team</p>
+</div>
+</body>
+</html>
