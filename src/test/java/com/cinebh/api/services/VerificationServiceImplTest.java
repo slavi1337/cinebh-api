@@ -1,7 +1,5 @@
 package com.cinebh.api.services;
 
-import com.cinebh.api.config.NotificationProperties;
-import com.cinebh.api.config.VerificationProperties;
 import com.cinebh.api.entities.User;
 import com.cinebh.api.entities.VerificationCode;
 import com.cinebh.api.entities.enums.VerificationCodeType;
@@ -16,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -35,9 +34,6 @@ class VerificationServiceImplTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    @Mock
-    private VerificationProperties verificationProperties;
-
     @InjectMocks
     private VerificationServiceImpl verificationService;
 
@@ -55,13 +51,13 @@ class VerificationServiceImplTest {
 
     @Test
     void shouldGenerateAndSaveCodeSuccessfully() {
-        when(verificationProperties.getCodeLength()).thenReturn(8);
-        when(verificationProperties.getCodeTtlMinutes()).thenReturn(15);
+        ReflectionTestUtils.setField(verificationService, "codeLength", 6);
+        ReflectionTestUtils.setField(verificationService, "codeTtlMinutes", 15);
         when(passwordEncoder.encode(any(String.class))).thenReturn("hashed-code");
 
         final String generatedCode = verificationService.generateAndSaveCode(testUser, VerificationCodeType.ACCOUNT_VERIFICATION);
 
-        assertThat(generatedCode).hasSize(8).matches("\\d+");
+        assertThat(generatedCode).hasSize(6).matches("\\d+");
 
         verify(verificationCodeRepository).invalidateAllPendingCodes(testUser.getId(), VerificationCodeType.ACCOUNT_VERIFICATION);
         verify(verificationCodeRepository).save(codeCaptor.capture());

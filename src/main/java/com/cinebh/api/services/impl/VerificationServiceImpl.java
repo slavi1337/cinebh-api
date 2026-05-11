@@ -1,12 +1,12 @@
 package com.cinebh.api.services.impl;
 
-import com.cinebh.api.config.VerificationProperties;
 import com.cinebh.api.entities.User;
 import com.cinebh.api.entities.VerificationCode;
 import com.cinebh.api.entities.enums.VerificationCodeType;
 import com.cinebh.api.repositories.VerificationCodeRepository;
 import com.cinebh.api.services.VerificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +15,7 @@ import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +25,12 @@ public class VerificationServiceImpl implements VerificationService {
 
     private final VerificationCodeRepository verificationCodeRepository;
     private final PasswordEncoder passwordEncoder;
-    private final VerificationProperties verificationProperties;
+
+    @Value("${app.verification.code-length:6}")
+    private int codeLength;
+
+    @Value("${app.verification.code-ttl-minutes:15}")
+    private int codeTtlMinutes;
 
     @Override
     @Transactional
@@ -41,7 +47,7 @@ public class VerificationServiceImpl implements VerificationService {
         code.setCodeHash(hashedCode);
         code.setIsUsed(false);
         code.setCreatedAt(OffsetDateTime.now());
-        code.setExpiresAt(OffsetDateTime.now().plusMinutes(verificationProperties.getCodeTtlMinutes()));
+        code.setExpiresAt(OffsetDateTime.now().plusMinutes(codeTtlMinutes));
 
         verificationCodeRepository.save(code);
 
@@ -76,11 +82,8 @@ public class VerificationServiceImpl implements VerificationService {
     }
 
     private String generateRandomDigits() {
-        final int length = verificationProperties.getCodeLength();
-        final StringBuilder builder = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
-            builder.append(SECURE_RANDOM.nextInt(10));
-        }
-        return builder.toString();
+        return SECURE_RANDOM.ints(codeLength, 0, 10)
+                .mapToObj(String::valueOf)
+                .collect(Collectors.joining());
     }
 }

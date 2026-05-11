@@ -1,12 +1,12 @@
 package com.cinebh.api.services.impl;
 
-import com.cinebh.api.config.NotificationProperties;
 import com.cinebh.api.services.NotificationService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -25,7 +25,12 @@ public class EmailNotificationService implements NotificationService {
 
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
-    private final NotificationProperties notificationProperties;
+
+    @Value("${app.notification.from-address}")
+    private String fromAddress;
+
+    @Value("${app.notification.from-name}")
+    private String fromName;
 
     @Async
     @Override
@@ -56,7 +61,7 @@ public class EmailNotificationService implements NotificationService {
 
             final String htmlContent = templateEngine.process(VERIFICATION_TEMPLATE, context);
 
-            helper.setFrom(notificationProperties.getFromAddress(), notificationProperties.getFromName());
+            helper.setFrom(fromAddress, fromName);
             helper.setTo(toEmail);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);

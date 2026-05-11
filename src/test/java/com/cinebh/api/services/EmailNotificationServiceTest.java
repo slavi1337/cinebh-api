@@ -1,6 +1,5 @@
 package com.cinebh.api.services;
 
-import com.cinebh.api.config.NotificationProperties;
 import com.cinebh.api.services.impl.EmailNotificationService;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
@@ -11,10 +10,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,9 +26,6 @@ class EmailNotificationServiceTest {
 
     @Mock
     private TemplateEngine templateEngine;
-
-    @Mock
-    private NotificationProperties notificationProperties;
 
     @InjectMocks
     private EmailNotificationService emailNotificationService;
@@ -67,8 +63,9 @@ class EmailNotificationServiceTest {
     }
 
     private void setupMocking(final MimeMessage mimeMessage) {
+        ReflectionTestUtils.setField(emailNotificationService, "fromAddress", "slavisa.covakusic@student.etf.unibl.org");
+        ReflectionTestUtils.setField(emailNotificationService, "fromName", "Cinebh");
+
         when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        when(notificationProperties.getFromAddress()).thenReturn("slavisa.covakusic@student.etf.unibl.org");
-        when(notificationProperties.getFromName()).thenReturn("Cinebh");
     }
 }
