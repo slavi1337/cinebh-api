@@ -66,7 +66,7 @@ class VerificationServiceImplTest {
         assertThat(savedCode.getUser()).isEqualTo(testUser);
         assertThat(savedCode.getType()).isEqualTo(VerificationCodeType.ACCOUNT_VERIFICATION);
         assertThat(savedCode.getCodeHash()).isEqualTo("hashed-code");
-        assertThat(savedCode.getIsUsed()).isFalse();
+        assertThat(savedCode.isUsed()).isFalse();
     }
 
     @Test
@@ -83,7 +83,7 @@ class VerificationServiceImplTest {
     void shouldReturnFalseAndInvalidateWhenCodeIsExpired() {
         final VerificationCode expiredCode = new VerificationCode();
         expiredCode.setExpiresAt(OffsetDateTime.now().minusMinutes(1));
-        expiredCode.setIsUsed(false);
+        expiredCode.setUsed(false);
 
         when(verificationCodeRepository.findLatestValidCode(testUser.getId(), VerificationCodeType.ACCOUNT_VERIFICATION))
                 .thenReturn(Optional.of(expiredCode));
@@ -92,7 +92,7 @@ class VerificationServiceImplTest {
 
         assertThat(result).isFalse();
         verify(verificationCodeRepository).save(codeCaptor.capture());
-        assertThat(codeCaptor.getValue().getIsUsed()).isTrue();
+        assertThat(codeCaptor.getValue().isUsed()).isTrue();
     }
 
     @Test
@@ -115,7 +115,7 @@ class VerificationServiceImplTest {
         final VerificationCode validCode = new VerificationCode();
         validCode.setExpiresAt(OffsetDateTime.now().plusMinutes(15));
         validCode.setCodeHash("hashed-code");
-        validCode.setIsUsed(false);
+        validCode.setUsed(false);
 
         when(verificationCodeRepository.findLatestValidCode(testUser.getId(), VerificationCodeType.ACCOUNT_VERIFICATION))
                 .thenReturn(Optional.of(validCode));
@@ -125,6 +125,6 @@ class VerificationServiceImplTest {
 
         assertThat(result).isTrue();
         verify(verificationCodeRepository).save(codeCaptor.capture());
-        assertThat(codeCaptor.getValue().getIsUsed()).isTrue();
+        assertThat(codeCaptor.getValue().isUsed()).isTrue();
     }
 }

@@ -45,7 +45,7 @@ public class VerificationCode {
     private OffsetDateTime expiresAt;
 
     @Column(name = "is_used", nullable = false)
-    private Boolean isUsed;
+    private boolean isUsed;
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
