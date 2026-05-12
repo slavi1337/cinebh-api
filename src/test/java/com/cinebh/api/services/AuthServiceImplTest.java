@@ -40,6 +40,9 @@ class AuthServiceImplTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private AdvancedValidationService advancedValidationService;
+
     @InjectMocks
     private AuthServiceImpl authService;
 
@@ -58,7 +61,7 @@ class AuthServiceImplTest {
 
         final User savedUser = userCaptor.getValue();
         assertThat(savedUser.getEmail()).isEqualTo("test@cinebh.com");
-        assertThat(savedUser.getIsActive()).isFalse();
+        assertThat(savedUser.isActive()).isFalse();
         assertThat(savedUser.getPasswordHash()).isEqualTo("hashed-password");
 
         verify(notificationService).sendAccountVerificationCode(eq("test@cinebh.com"), eq(null), eq("123456"));
@@ -68,7 +71,7 @@ class AuthServiceImplTest {
     void shouldThrowExceptionWhenActiveEmailAlreadyExists() {
         final RegisterRequest request = new RegisterRequest("existing@cinebh.com", "Password123");
         final User existingUser = new User();
-        existingUser.setIsActive(true);
+        existingUser.setActive(true);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(existingUser));
 
@@ -82,7 +85,7 @@ class AuthServiceImplTest {
     void shouldThrowExceptionWithSpecificMessageWhenInactiveEmailExists() {
         final RegisterRequest request = new RegisterRequest("inactive@cinebh.com", "Password123");
         final User existingUser = new User();
-        existingUser.setIsActive(false);
+        existingUser.setActive(false);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(existingUser));
 
@@ -97,7 +100,7 @@ class AuthServiceImplTest {
         final VerifyRequest request = new VerifyRequest("test@cinebh.com", "123456");
         final User user = new User();
         user.setEmail(request.email());
-        user.setIsActive(false);
+        user.setActive(false);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(user));
         when(verificationService.verifyCode(user, VerificationCodeType.ACCOUNT_VERIFICATION, "123456"))
@@ -105,7 +108,7 @@ class AuthServiceImplTest {
 
         authService.verify(request);
 
-        assertThat(user.getIsActive()).isTrue();
+        assertThat(user.isActive()).isTrue();
         verify(userRepository).save(user);
     }
 
@@ -114,7 +117,7 @@ class AuthServiceImplTest {
         final VerifyRequest request = new VerifyRequest("test@cinebh.com", "000000");
         final User user = new User();
         user.setEmail(request.email());
-        user.setIsActive(false);
+        user.setActive(false);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(user));
         when(verificationService.verifyCode(user, VerificationCodeType.ACCOUNT_VERIFICATION, "000000"))
