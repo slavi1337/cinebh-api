@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -19,7 +20,7 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ApiErrorResponse> handleApiException(ApiException exception) {
+    public ResponseEntity<ApiErrorResponse> handleApiException(final ApiException exception) {
         log.warn("API exception occurred: status={}, message={}", exception.getStatus(), exception.getMessage());
 
         final ApiErrorResponse response = new ApiErrorResponse(
@@ -33,21 +34,30 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValidException(
-            MethodArgumentNotValidException exception
+            final MethodArgumentNotValidException exception
     ) {
         log.warn("Method argument validation failed", exception);
+
+        final List<ApiErrorResponse.ValidationError> errors = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> new ApiErrorResponse.ValidationError(
+                        10001,
+                        error.getField(),
+                        error.getDefaultMessage()
+                ))
+                .toList();
 
         final ApiErrorResponse response = new ApiErrorResponse(
                 "Validation failed",
                 HttpStatus.BAD_REQUEST.value(),
-                OffsetDateTime.now()
+                OffsetDateTime.now(),
+                errors
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler(BindException.class)
-    public ResponseEntity<ApiErrorResponse> handleBindException(BindException exception) {
+    public ResponseEntity<ApiErrorResponse> handleBindException(final BindException exception) {
         log.warn("Request binding failed", exception);
 
         final ApiErrorResponse response = new ApiErrorResponse(
@@ -61,7 +71,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleConstraintViolationException(
-            ConstraintViolationException exception
+            final ConstraintViolationException exception
     ) {
         log.warn("Constraint violation occurred", exception);
 
@@ -75,7 +85,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleGenericException(Exception exception) {
+    public ResponseEntity<ApiErrorResponse> handleGenericException(final Exception exception) {
         log.error("Unexpected exception occurred", exception);
 
         final ApiErrorResponse response = new ApiErrorResponse(

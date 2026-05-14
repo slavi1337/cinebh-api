@@ -24,7 +24,7 @@ import java.util.List;
 @RestController
 @Validated
 @RequiredArgsConstructor
-@RequestMapping("/api/movies")
+@RequestMapping("/api/v1/movies")
 @Tag(name = "Movies", description = "Public movie endpoints for homepage and listings")
 public class MovieController {
 

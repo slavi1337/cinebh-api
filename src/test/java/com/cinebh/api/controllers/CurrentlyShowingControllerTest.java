@@ -26,9 +26,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class CurrentlyShowingControllerTest {
 
-    private static final String CURRENTLY_SHOWING_URL = "/api/currently-showing";
-    private static final String FILTERS_URL = "/api/currently-showing/filters";
-    private static final String VENUES_FILTER_URL = "/api/currently-showing/filters/venues";
+    private static final String CURRENTLY_SHOWING_URL = "/api/v1/currently-showing";
+    private static final String FILTERS_URL = "/api/v1/currently-showing/filters";
+    private static final String VENUES_FILTER_URL = "/api/v1/currently-showing/filters/venues";
     private static final String DEFAULT_DATE = "2026-04-16";
 
     @Mock

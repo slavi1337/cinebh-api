@@ -45,7 +45,7 @@ public class VerificationServiceImpl implements VerificationService {
         code.setUser(user);
         code.setType(type);
         code.setCodeHash(hashedCode);
-        code.setIsUsed(false);
+        code.setUsed(false);
         code.setCreatedAt(OffsetDateTime.now());
         code.setExpiresAt(OffsetDateTime.now().plusMinutes(codeTtlMinutes));
 
@@ -67,7 +67,7 @@ public class VerificationServiceImpl implements VerificationService {
         final VerificationCode code = activeCodeOptional.get();
 
         if (code.getExpiresAt().isBefore(OffsetDateTime.now())) {
-            code.setIsUsed(true);
+            code.setUsed(true);
             verificationCodeRepository.save(code);
             return false;
         }
@@ -76,7 +76,7 @@ public class VerificationServiceImpl implements VerificationService {
             return false;
         }
 
-        code.setIsUsed(true);
+        code.setUsed(true);
         verificationCodeRepository.save(code);
         return true;
     }

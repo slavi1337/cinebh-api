@@ -25,9 +25,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class MovieControllerTest {
 
-    private static final String HERO_MOVIES_URL = "/api/movies/hero";
-    private static final String CURRENTLY_SHOWING_MOVIES_URL = "/api/movies/currently-showing";
-    private static final String UPCOMING_MOVIES_URL = "/api/movies/upcoming";
+    private static final String HERO_MOVIES_URL = "/api/v1/movies/hero";
+    private static final String CURRENTLY_SHOWING_MOVIES_URL = "/api/v1/movies/currently-showing";
+    private static final String UPCOMING_MOVIES_URL = "/api/v1/movies/upcoming";
 
     @Mock
     private MovieService movieService;
