@@ -5,6 +5,7 @@ import com.cinebh.api.services.AdvancedValidationService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -33,12 +34,14 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
     private static final String IANA_TLD_URL = "https://data.iana.org/TLD/tlds-alpha-by-domain.txt";
     private static final String DISPOSABLE_DOMAINS_URL = "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/disposable_email_blocklist.conf";
     private static final String PWNED_API_URL = "https://api.pwnedpasswords.com/range/";
-
-    private static final String REDIS_MX_PREFIX = "mx_record:";
-    private static final long REDIS_MX_TTL_DAYS = 7;
-
     private final RestClient restClient;
     private final StringRedisTemplate redisTemplate;
+
+    @Value("${app.validation.cache.mx-record-ttl-days:7}")
+    private long redisMxTtlDays;
+
+    @Value("${app.validation.cache.mx-record-prefix:mx_record:}")
+    private String redisMxPrefix;
 
     private Set<String> validTlds = new HashSet<>();
     private Set<String> disposableDomains = new HashSet<>();
@@ -142,7 +145,7 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
     }
 
     private boolean hasMxRecord(final String domain) {
-        final String redisKey = REDIS_MX_PREFIX + domain;
+        final String redisKey = redisMxPrefix + domain;
 
         try {
             final String cachedValue = redisTemplate.opsForValue().get(redisKey);
@@ -159,8 +162,12 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
         final boolean mxExists = performMxLookup(domain);
 
         try {
-            redisTemplate.opsForValue().set(redisKey, String.valueOf(mxExists), REDIS_MX_TTL_DAYS, TimeUnit.DAYS);
-            log.info("CACHE SAVED: MX record for domain '{}' saved to Redis", domain);
+            final Boolean wasSaved = redisTemplate.opsForValue()
+                    .setIfAbsent(redisKey, String.valueOf(mxExists), redisMxTtlDays, TimeUnit.DAYS);
+
+            if (Boolean.TRUE.equals(wasSaved)) {
+                log.info("CACHE SAVED: MX record for domain '{}' saved to Redis under key '{}'", domain, redisKey);
+            }
         } catch (Exception e) {
             log.warn("Failed to save MX record to Redis for domain: {}", domain);
         }

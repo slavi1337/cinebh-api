@@ -36,4 +36,8 @@ app:
   verification:
     code-ttl-minutes: 15
     code-length: 6
+  validation:
+    cache:
+      mx-record-ttl-days: 7
+      mx-record-prefix: "mx_record:"
 
