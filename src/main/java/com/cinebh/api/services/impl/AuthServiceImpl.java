@@ -33,8 +33,6 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void register(final RegisterRequest request) {
-        advancedValidationService.validateEmailDomain(request.email());
-        advancedValidationService.validatePasswordPwned(request.password());
 
         userRepository.findByEmail(request.email()).ifPresent(existingUser -> {
             final String message = existingUser.isActive()
@@ -42,6 +40,9 @@ public class AuthServiceImpl implements AuthService {
                     : "Account already exists but is not verified. Please proceed to login to receive a new verification code.";
             throw new ApiException(message, HttpStatus.BAD_REQUEST);
         });
+
+        advancedValidationService.validateEmailDomain(request.email());
+        advancedValidationService.validatePasswordPwned(request.password());
 
         final User user = new User();
         user.setId(UUID.randomUUID());

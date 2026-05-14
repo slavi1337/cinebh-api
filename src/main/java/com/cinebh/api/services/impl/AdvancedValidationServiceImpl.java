@@ -5,7 +5,9 @@ import com.cinebh.api.services.AdvancedValidationService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -20,9 +22,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 @Service
 public class AdvancedValidationServiceImpl implements AdvancedValidationService {
@@ -33,12 +34,19 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
     private static final String DISPOSABLE_DOMAINS_URL = "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/disposable_email_blocklist.conf";
     private static final String PWNED_API_URL = "https://api.pwnedpasswords.com/range/";
 
+    private static final String REDIS_MX_PREFIX = "mx_record:";
+    private static final long REDIS_MX_TTL_DAYS = 7;
+
     private final RestClient restClient;
+    private final StringRedisTemplate redisTemplate;
+
     private Set<String> validTlds = new HashSet<>();
     private Set<String> disposableDomains = new HashSet<>();
     private boolean isInitialized = false;
 
-    public AdvancedValidationServiceImpl() {
+    public AdvancedValidationServiceImpl(final StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+
         final SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(3));
         requestFactory.setReadTimeout(Duration.ofSeconds(3));
@@ -134,6 +142,33 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
     }
 
     private boolean hasMxRecord(final String domain) {
+        final String redisKey = REDIS_MX_PREFIX + domain;
+
+        try {
+            final String cachedValue = redisTemplate.opsForValue().get(redisKey);
+            if (cachedValue != null) {
+                log.info("CACHE HIT: MX record for domain '{}' retrieved from Redis", domain);
+                return Boolean.parseBoolean(cachedValue);
+            }
+        } catch (Exception e) {
+            log.warn("Redis connection failed. Bypassing cache for domain: {}", domain);
+        }
+
+        log.info("CACHE MISS: Performing slow DNS lookup for domain '{}'", domain);
+
+        final boolean mxExists = performMxLookup(domain);
+
+        try {
+            redisTemplate.opsForValue().set(redisKey, String.valueOf(mxExists), REDIS_MX_TTL_DAYS, TimeUnit.DAYS);
+            log.info("CACHE SAVED: MX record for domain '{}' saved to Redis", domain);
+        } catch (Exception e) {
+            log.warn("Failed to save MX record to Redis for domain: {}", domain);
+        }
+
+        return mxExists;
+    }
+
+    private boolean performMxLookup(final String domain) {
         try {
             final Hashtable<String, String> env = new Hashtable<>();
             env.put("java.naming.factory.initial", "com.sun.jndi.dns.DnsContextFactory");
