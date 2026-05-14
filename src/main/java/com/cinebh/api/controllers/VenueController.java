@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @Validated
 @RequiredArgsConstructor
-@RequestMapping("/api/venues")
+@RequestMapping("/api/v1/venues")
 @Tag(name = "Venues", description = "Public venue endpoints for homepage and listings")
 public class VenueController {
 

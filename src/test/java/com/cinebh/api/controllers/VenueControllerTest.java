@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class VenueControllerTest {
 
-    private static final String VENUES_URL = "/api/venues";
+    private static final String VENUES_URL = "/api/v1/venues";
 
     @Mock
     private VenueService venueService;

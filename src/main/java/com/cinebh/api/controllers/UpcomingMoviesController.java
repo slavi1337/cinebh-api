@@ -28,7 +28,7 @@ import java.util.UUID;
 @RestController
 @Validated
 @RequiredArgsConstructor
-@RequestMapping("/api/upcoming-movies")
+@RequestMapping("/api/v1/upcoming-movies")
 @Tag(name = "Upcoming Movies", description = "Public endpoints for upcoming movies page")
 public class UpcomingMoviesController {
 

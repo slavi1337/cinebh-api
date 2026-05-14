@@ -25,7 +25,7 @@ import java.util.UUID;
 @RestController
 @Validated
 @RequiredArgsConstructor
-@RequestMapping("/api/currently-showing")
+@RequestMapping("/api/v1/currently-showing")
 @Tag(name = "Currently Showing", description = "Public endpoints for currently showing movies page")
 public class CurrentlyShowingController {
 
