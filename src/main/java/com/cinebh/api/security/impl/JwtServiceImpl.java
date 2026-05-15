@@ -25,13 +25,13 @@ public class JwtServiceImpl implements JwtService {
         return buildToken(
                 Map.of("role", user.getRole().name()),
                 user.getEmail(),
-                securityProperties.getJwt().getAccessTokenExpirationMs()
+                securityProperties.jwt().accessTokenExpirationMs()
         );
     }
 
     @Override
     public String generateRefreshToken(final User user) {
-        return buildToken(Map.of(), user.getEmail(), securityProperties.getJwt().getRefreshTokenExpirationMs());
+        return buildToken(Map.of(), user.getEmail(), securityProperties.jwt().refreshTokenExpirationMs());
     }
 
     @Override
@@ -68,7 +68,7 @@ public class JwtServiceImpl implements JwtService {
     }
 
     private SecretKey getSigningKey() {
-        final byte[] keyBytes = securityProperties.getJwt().getSecret().getBytes(StandardCharsets.UTF_8);
+        final byte[] keyBytes = securityProperties.jwt().secret().getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

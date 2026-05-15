@@ -31,8 +31,8 @@ class JwtServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        when(securityProperties.getJwt()).thenReturn(jwtProperties);
-        when(jwtProperties.getSecret()).thenReturn("v9y$B&E)H@McQfTjWnZr4u7x!A%C*F-JaNdTgUkXp2s5v8y/B?E(G+KbPeShVmYq");
+        when(securityProperties.jwt()).thenReturn(jwtProperties);
+        when(jwtProperties.secret()).thenReturn("v9y$B&E)H@McQfTjWnZr4u7x!A%C*F-JaNdTgUkXp2s5v8y/B?E(G+KbPeShVmYq");
 
         testUser = new User();
         testUser.setEmail("test@cinebh.com");
@@ -41,7 +41,7 @@ class JwtServiceImplTest {
 
     @Test
     void shouldGenerateValidAccessToken() {
-        when(jwtProperties.getAccessTokenExpirationMs()).thenReturn(3600000L);
+        when(jwtProperties.accessTokenExpirationMs()).thenReturn(3600000L);
 
         final String token = jwtService.generateAccessToken(testUser);
 
@@ -55,7 +55,7 @@ class JwtServiceImplTest {
 
     @Test
     void shouldGenerateValidRefreshToken() {
-        when(jwtProperties.getRefreshTokenExpirationMs()).thenReturn(86400000L);
+        when(jwtProperties.refreshTokenExpirationMs()).thenReturn(86400000L);
 
         final String token = jwtService.generateRefreshToken(testUser);
 

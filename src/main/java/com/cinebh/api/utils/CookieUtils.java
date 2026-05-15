@@ -22,8 +22,8 @@ public final class CookieUtils {
             final String accessToken,
             final String refreshToken
     ) {
-        final long accessMaxAge = securityProperties.getJwt().getAccessTokenExpirationMs() / 1000;
-        final long refreshMaxAge = securityProperties.getJwt().getRefreshTokenExpirationMs() / 1000;
+        final long accessMaxAge = securityProperties.jwt().accessTokenExpirationMs() / 1000;
+        final long refreshMaxAge = securityProperties.jwt().refreshTokenExpirationMs() / 1000;
 
         response.addHeader("Set-Cookie", buildCookie("access_token", accessToken, accessMaxAge).toString());
         response.addHeader("Set-Cookie", buildCookie("refresh_token", refreshToken, refreshMaxAge).toString());
@@ -46,12 +46,12 @@ public final class CookieUtils {
 
     private ResponseCookie buildCookie(final String name, final String value, final long maxAgeSeconds) {
         return ResponseCookie.from(name, value)
-                .httpOnly(securityProperties.getCookie().isHttpOnly())
-                .secure(securityProperties.getCookie().isSecure())
+                .httpOnly(securityProperties.cookie().httpOnly())
+                .secure(securityProperties.cookie().secure())
                 .path("/")
-                .domain(securityProperties.getCookie().getDomain())
+                .domain(securityProperties.cookie().domain())
                 .maxAge(maxAgeSeconds)
-                .sameSite(securityProperties.getCookie().getSameSite())
+                .sameSite(securityProperties.cookie().sameSite())
                 .build();
     }
 }

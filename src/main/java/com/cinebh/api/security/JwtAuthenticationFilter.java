@@ -42,9 +42,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String token = jwtToken.get();
 
-        if (jwtService.isTokenValid(token)) {
-            final String userEmail = jwtService.extractEmail(token);
+        try {
             final Claims claims = jwtService.extractClaims(token);
+            final String userEmail = claims.getSubject();
             final String role = claims.get("role", String.class);
 
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -61,6 +61,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
+        } catch (Exception e) {
+            logger.warn("JWT validation failed: " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);

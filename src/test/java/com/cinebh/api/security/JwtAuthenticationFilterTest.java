@@ -43,9 +43,9 @@ class JwtAuthenticationFilterTest {
 
         final Cookie[] cookies = {new Cookie("access_token", token)};
         when(request.getCookies()).thenReturn(cookies);
-        when(jwtService.isTokenValid(token)).thenReturn(true);
-        when(jwtService.extractEmail(token)).thenReturn(email);
+
         when(jwtService.extractClaims(token)).thenReturn(claims);
+        when(claims.getSubject()).thenReturn(email);
         when(claims.get("role", String.class)).thenReturn("CUSTOMER");
 
         filter.doFilterInternal(request, response, filterChain);

@@ -89,7 +89,7 @@ public class AuthController {
     )
     public ResponseEntity<Void> logout(final HttpServletResponse response) {
         authService.logout(response);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/refresh")
@@ -98,11 +98,11 @@ public class AuthController {
             description = "Issues a new access token using refresh token cookie"
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Tokens refreshed successfully"),
+            @ApiResponse(responseCode = "204", description = "Tokens refreshed successfully"),
             @ApiResponse(responseCode = "401", description = "Invalid or missing refresh token")
     })
     public ResponseEntity<Void> refresh(final HttpServletRequest request, final HttpServletResponse response) {
         authService.refresh(request, response);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

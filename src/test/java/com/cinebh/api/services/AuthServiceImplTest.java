@@ -12,6 +12,7 @@ import com.cinebh.api.repositories.UserRepository;
 import com.cinebh.api.security.JwtService;
 import com.cinebh.api.services.impl.AuthServiceImpl;
 import com.cinebh.api.utils.CookieUtils;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -160,14 +161,21 @@ class AuthServiceImplTest {
     @Test
     void shouldRefreshTokensSuccessfully() {
         final String refreshToken = "valid-refresh-token";
+        final String email = "test@cinebh.com";
+        final User user = new User();
+        user.setEmail(email);
+        final Claims claims = mock(Claims.class);
+
         final HttpServletRequest request = mock(HttpServletRequest.class);
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         when(cookieUtils.extractCookie(request, "refresh_token")).thenReturn(Optional.of(refreshToken));
-        when(jwtService.isTokenValid(refreshToken)).thenReturn(true);
-        when(jwtService.extractEmail(refreshToken)).thenReturn(testUser.getEmail());
-        when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
-        when(jwtService.generateAccessToken(testUser)).thenReturn("new-access-token");
+
+        when(jwtService.extractClaims(refreshToken)).thenReturn(claims);
+        when(claims.getSubject()).thenReturn(email);
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(jwtService.generateAccessToken(user)).thenReturn("new-access-token");
 
         authService.refresh(request, response);
 

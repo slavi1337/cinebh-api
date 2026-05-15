@@ -15,6 +15,7 @@ import com.cinebh.api.services.AuthService;
 import com.cinebh.api.services.NotificationService;
 import com.cinebh.api.services.VerificationService;
 import com.cinebh.api.utils.CookieUtils;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -123,21 +124,22 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public void refresh(final HttpServletRequest request, final HttpServletResponse response) {
         final String refreshToken = cookieUtils.extractCookie(request, "refresh_token")
                 .orElseThrow(() -> new ApiException("Refresh token missing", HttpStatus.UNAUTHORIZED));
 
-        if (!jwtService.isTokenValid(refreshToken)) {
+        try {
+            final Claims claims = jwtService.extractClaims(refreshToken);
+            final String email = claims.getSubject();
+
+            final User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ApiException("User not found.", HttpStatus.UNAUTHORIZED));
+
+            final String newAccessToken = jwtService.generateAccessToken(user);
+            cookieUtils.setTokenCookies(response, newAccessToken, refreshToken);
+        } catch (Exception e) {
             throw new ApiException("Invalid or expired refresh token.", HttpStatus.UNAUTHORIZED);
         }
-
-        final String email = jwtService.extractEmail(refreshToken);
-        final User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ApiException("User not found.", HttpStatus.UNAUTHORIZED));
-
-        final String newAccessToken = jwtService.generateAccessToken(user);
-        cookieUtils.setTokenCookies(response, newAccessToken, refreshToken);
     }
 
     @Override

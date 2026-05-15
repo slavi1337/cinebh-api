@@ -40,9 +40,9 @@ class CookieUtilsTest {
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         stubCookieSettings();
-        when(securityProperties.getJwt()).thenReturn(jwtProperties);
-        when(jwtProperties.getAccessTokenExpirationMs()).thenReturn(900000L);
-        when(jwtProperties.getRefreshTokenExpirationMs()).thenReturn(604800000L);
+        when(securityProperties.jwt()).thenReturn(jwtProperties);
+        when(jwtProperties.accessTokenExpirationMs()).thenReturn(900000L);
+        when(jwtProperties.refreshTokenExpirationMs()).thenReturn(604800000L);
 
         cookieUtils.setTokenCookies(response, "access-val", "refresh-val");
 
@@ -75,10 +75,10 @@ class CookieUtilsTest {
     }
 
     private void stubCookieSettings() {
-        when(securityProperties.getCookie()).thenReturn(cookieProperties);
-        when(cookieProperties.getDomain()).thenReturn("localhost");
-        when(cookieProperties.isHttpOnly()).thenReturn(true);
-        when(cookieProperties.isSecure()).thenReturn(true);
-        when(cookieProperties.getSameSite()).thenReturn("None");
+        when(securityProperties.cookie()).thenReturn(cookieProperties);
+        when(cookieProperties.domain()).thenReturn("localhost");
+        when(cookieProperties.httpOnly()).thenReturn(true);
+        when(cookieProperties.secure()).thenReturn(true);
+        when(cookieProperties.sameSite()).thenReturn("None");
     }
 }

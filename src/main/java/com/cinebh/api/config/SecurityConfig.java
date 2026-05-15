@@ -2,6 +2,7 @@ package com.cinebh.api.config;
 
 import com.cinebh.api.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@EnableConfigurationProperties(SecurityProperties.class)
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -53,12 +55,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource(final SecurityProperties securityProperties) {
         final CorsConfiguration configuration = new CorsConfiguration();
-        final SecurityProperties.Cors cors = securityProperties.getCors();
+        final SecurityProperties.Cors cors = securityProperties.cors();
 
-        configuration.setAllowedOrigins(cors.getAllowedOrigins());
-        configuration.setAllowedMethods(cors.getAllowedMethods());
-        configuration.setAllowedHeaders(cors.getAllowedHeaders());
-        configuration.setExposedHeaders(cors.getExposedHeaders());
+        configuration.setAllowedOrigins(cors.allowedOrigins());
+        configuration.setAllowedMethods(cors.allowedMethods());
+        configuration.setAllowedHeaders(cors.allowedHeaders());
+        configuration.setExposedHeaders(cors.exposedHeaders());
         configuration.setAllowCredentials(true);
 
         final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
