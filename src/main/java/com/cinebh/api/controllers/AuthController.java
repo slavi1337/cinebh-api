@@ -1,5 +1,7 @@
 package com.cinebh.api.controllers;
 
+import com.cinebh.api.dto.auth.LoginRequest;
+import com.cinebh.api.dto.auth.LoginResponse;
 import com.cinebh.api.dto.auth.RegisterRequest;
 import com.cinebh.api.dto.auth.VerifyRequest;
 import com.cinebh.api.services.AuthService;
@@ -7,6 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -46,7 +50,7 @@ public class AuthController {
     @PostMapping("/verify")
     @Operation(
             summary = "Verify user account",
-            description = "Verifies the user's account using the 6-digit code sent to their email"
+            description = "Verifies account using the code sent via email"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Account verified successfully"),
@@ -59,5 +63,46 @@ public class AuthController {
     ) {
         authService.verify(verifyRequest);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/login")
+    @Operation(
+            summary = "Authenticate user",
+            description = "Authenticates user and sets HttpOnly JWT cookies"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Login successful"),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials"),
+            @ApiResponse(responseCode = "403", description = "Account not verified")
+    })
+    public ResponseEntity<LoginResponse> login(
+            @Valid @RequestBody final LoginRequest loginRequest,
+            final HttpServletResponse response
+    ) {
+        return ResponseEntity.ok(authService.login(loginRequest, response));
+    }
+
+    @PostMapping("/logout")
+    @Operation(
+            summary = "Logout user",
+            description = "Clears JWT authentication cookies"
+    )
+    public ResponseEntity<Void> logout(final HttpServletResponse response) {
+        authService.logout(response);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/refresh")
+    @Operation(
+            summary = "Refresh tokens",
+            description = "Issues a new access token using refresh token cookie"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Tokens refreshed successfully"),
+            @ApiResponse(responseCode = "401", description = "Invalid or missing refresh token")
+    })
+    public ResponseEntity<Void> refresh(final HttpServletRequest request, final HttpServletResponse response) {
+        authService.refresh(request, response);
+        return ResponseEntity.noContent().build();
     }
 }
