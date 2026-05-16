@@ -141,6 +141,10 @@ public class AuthServiceImpl implements AuthService {
 
         cookieUtils.setTokenCookies(response, accessToken, refreshToken);
 
+        final String fullName = (user.getFirstName() != null && user.getLastName() != null)
+                ? user.getFirstName() + " " + user.getLastName()
+                : user.getEmail().split("@")[0];
+
         return new LoginResponse(user.getId(), user.getEmail(), fullName, user.getRole().name());
     }
 

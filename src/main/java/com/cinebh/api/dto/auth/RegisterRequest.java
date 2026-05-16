@@ -51,8 +51,9 @@ public record RegisterRequest(
         String streetAddress
 ) {
     public RegisterRequest {
-        if (email != null) {
-            email = email.trim().toLowerCase();
-        }
+        if (email != null) email = email.trim().toLowerCase();
+        if (firstName != null) firstName = firstName.trim();
+        if (lastName != null) lastName = lastName.trim();
+        if (streetAddress != null) streetAddress = streetAddress.trim();
     }
 }
