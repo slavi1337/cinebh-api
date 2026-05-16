@@ -7,7 +7,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -26,6 +29,10 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.Phonenumber;
+
 @Service
 public class AdvancedValidationServiceImpl implements AdvancedValidationService {
 
@@ -34,6 +41,9 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
     private static final String IANA_TLD_URL = "https://data.iana.org/TLD/tlds-alpha-by-domain.txt";
     private static final String DISPOSABLE_DOMAINS_URL = "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/disposable_email_blocklist.conf";
     private static final String PWNED_API_URL = "https://api.pwnedpasswords.com/range/";
+    private static final Set<String> RESERVED_NAMES = Set.of(
+            "admin", "root", "system", "administrator", "guest", "info", "noreply", "cinebh", "support"
+    );
     private final RestClient restClient;
     private final StringRedisTemplate redisTemplate;
 
@@ -199,5 +209,70 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
         }
 
         return builder.toString();
+    }
+
+    @Override
+    public void validatePhone(final String phone) {
+        if (phone == null || phone.isBlank()) {
+            return;
+        }
+
+        final PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+        try {
+            final Phonenumber.PhoneNumber numberProto = phoneUtil.parse(phone, null);
+            final boolean isValid = phoneUtil.isValidNumber(numberProto);
+            final PhoneNumberUtil.PhoneNumberType type = phoneUtil.getNumberType(numberProto);
+
+            if (!isValid || (type != PhoneNumberUtil.PhoneNumberType.MOBILE && type != PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE)) {
+                throw new ApiException("Invalid phone number. Must be a valid international mobile number.", HttpStatus.BAD_REQUEST);
+            }
+        } catch (NumberParseException e) {
+            throw new ApiException("Invalid phone number format.", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public void validateNameNotReserved(final String firstName, final String lastName) {
+        if (firstName != null && RESERVED_NAMES.contains(firstName.toLowerCase())) {
+            throw new ApiException("The provided first name is a reserved system keyword.", HttpStatus.BAD_REQUEST);
+        }
+        if (lastName != null && RESERVED_NAMES.contains(lastName.toLowerCase())) {
+            throw new ApiException("The provided last name is a reserved system keyword.", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public void validateImageUrl(final String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return;
+        }
+
+        try {
+            final ResponseEntity<Void> response = restClient.head()
+                    .uri(imageUrl)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new ApiException("Image URL is unreachable (HTTP " + response.getStatusCode().value() + ").", HttpStatus.BAD_REQUEST);
+            }
+
+            final HttpHeaders headers = response.getHeaders();
+
+            final MediaType contentType = headers.getContentType();
+            if (contentType == null || !contentType.getType().equalsIgnoreCase("image")) {
+                throw new ApiException("The provided URL does not point to a valid image.", HttpStatus.BAD_REQUEST);
+            }
+
+            final long contentLength = headers.getContentLength();
+            if (contentLength > 5 * 1024 * 1024) {
+                throw new ApiException("The image is too large. Maximum allowed size is 5MB.", HttpStatus.BAD_REQUEST);
+            }
+
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to validate image URL. Ensure the link is publicly accessible.", HttpStatus.BAD_REQUEST);
+        }
     }
 }
