@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import java.util.UUID;
+
 public record RegisterRequest(
 
         @Schema(description = "User's email address", example = "user@example.com")
@@ -21,11 +23,34 @@ public record RegisterRequest(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$",
                 message = "Password must contain at least one uppercase letter, one lowercase letter, and one number"
         )
-        String password
+        String password,
+
+        @Schema(description = "User's first name", example = "John")
+        @Size(max = 50, message = "First name must be at most 50 characters")
+        String firstName,
+
+        @Schema(description = "User's last name", example = "Doe")
+        @Size(max = 50, message = "Last name must be at most 50 characters")
+        String lastName,
+
+        @Schema(description = "International mobile phone number", example = "+38761123456")
+        String phone,
+
+        @Schema(description = "Profile image URL", example = "https://placehold.co/600x400")
+        @Pattern(regexp = "^(http|https)://.*", message = "Must be a valid URL")
+        String profileImageUrl,
+
+        @Schema(description = "City ID")
+        UUID cityId,
+
+        @Schema(description = "Street address", example = "Marsala Tita 12")
+        @Size(max = 50, message = "Street address must be at most 50 characters")
+        String streetAddress
 ) {
     public RegisterRequest {
-        if (email != null) {
-            email = email.trim().toLowerCase();
-        }
+        if (email != null) email = email.trim().toLowerCase();
+        if (firstName != null) firstName = firstName.trim();
+        if (lastName != null) lastName = lastName.trim();
+        if (streetAddress != null) streetAddress = streetAddress.trim();
     }
 }
