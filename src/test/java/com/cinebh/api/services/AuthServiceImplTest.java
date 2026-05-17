@@ -130,7 +130,7 @@ class AuthServiceImplTest {
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST)
-                .hasMessage("Email is already in use.");
+                .hasMessage("User DTO validation failed.");
     }
 
     @Test
@@ -144,7 +144,7 @@ class AuthServiceImplTest {
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST)
-                .hasMessage("Account already exists but is not verified. Please proceed to login to receive a new verification code.");
+                .hasMessage("User DTO validation failed.");
     }
 
     @Test

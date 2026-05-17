@@ -26,7 +26,8 @@ public class GlobalExceptionHandler {
         final ApiErrorResponse response = new ApiErrorResponse(
                 exception.getMessage(),
                 exception.getStatus().value(),
-                OffsetDateTime.now()
+                OffsetDateTime.now(),
+                exception.getErrors()
         );
 
         return ResponseEntity.status(exception.getStatus()).body(response);

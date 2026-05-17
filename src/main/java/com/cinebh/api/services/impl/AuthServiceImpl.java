@@ -49,7 +49,7 @@ public class AuthServiceImpl implements AuthService {
             final String message = existingUser.isActive()
                     ? "Email is already in use."
                     : "Account already exists but is not verified. Please proceed to login to receive a new verification code.";
-            throw new ApiException(message, HttpStatus.BAD_REQUEST);
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10001, "email", message);
         });
 
         advancedValidationService.validateEmailDomain(request.email());
@@ -79,7 +79,7 @@ public class AuthServiceImpl implements AuthService {
         try {
             userRepository.saveAndFlush(user);
         } catch (org.springframework.dao.DataIntegrityViolationException exception) {
-            throw new ApiException("Email or Phone number is already in use.", HttpStatus.BAD_REQUEST);
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10002, "email/phone", "Email or Phone number is already in use.");
         }
 
         final String fullName = (user.getFirstName() != null && user.getLastName() != null)
