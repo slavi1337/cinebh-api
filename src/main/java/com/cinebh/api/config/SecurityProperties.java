@@ -13,7 +13,8 @@ public record SecurityProperties(
     public record Jwt(
             String secret,
             long accessTokenExpirationMs,
-            long refreshTokenExpirationMs
+            long refreshTokenExpirationMs,
+            long rememberMeRefreshTokenExpirationMs
     ) {
     }
 

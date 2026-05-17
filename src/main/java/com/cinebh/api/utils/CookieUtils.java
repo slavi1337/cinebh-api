@@ -15,23 +15,32 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public final class CookieUtils {
 
+    private static final String ACCESS_TOKEN_COOKIE = "access_token";
+    private static final String REFRESH_TOKEN_COOKIE = "refresh_token";
+
     private final SecurityProperties securityProperties;
 
     public void setTokenCookies(
             final HttpServletResponse response,
             final String accessToken,
-            final String refreshToken
+            final String refreshToken,
+            final boolean rememberMe
     ) {
-        final long accessMaxAge = securityProperties.jwt().accessTokenExpirationMs() / 1000;
-        final long refreshMaxAge = securityProperties.jwt().refreshTokenExpirationMs() / 1000;
+        if (rememberMe) {
+            setPersistentTokenCookies(response, accessToken, refreshToken);
+            return;
+        }
 
-        response.addHeader("Set-Cookie", buildCookie("access_token", accessToken, accessMaxAge).toString());
-        response.addHeader("Set-Cookie", buildCookie("refresh_token", refreshToken, refreshMaxAge).toString());
+        setSessionTokenCookies(response, accessToken, refreshToken);
+    }
+
+    public void setAccessTokenCookie(final HttpServletResponse response, final String accessToken) {
+        response.addHeader("Set-Cookie", buildSessionCookie(ACCESS_TOKEN_COOKIE, accessToken).toString());
     }
 
     public void clearTokenCookies(final HttpServletResponse response) {
-        response.addHeader("Set-Cookie", buildCookie("access_token", "", 0).toString());
-        response.addHeader("Set-Cookie", buildCookie("refresh_token", "", 0).toString());
+        response.addHeader("Set-Cookie", buildPersistentCookie(ACCESS_TOKEN_COOKIE, "", 0).toString());
+        response.addHeader("Set-Cookie", buildPersistentCookie(REFRESH_TOKEN_COOKIE, "", 0).toString());
     }
 
     public Optional<String> extractCookie(final HttpServletRequest request, final String name) {
@@ -44,14 +53,42 @@ public final class CookieUtils {
                 .findFirst();
     }
 
-    private ResponseCookie buildCookie(final String name, final String value, final long maxAgeSeconds) {
+    private void setSessionTokenCookies(
+            final HttpServletResponse response,
+            final String accessToken,
+            final String refreshToken
+    ) {
+        response.addHeader("Set-Cookie", buildSessionCookie(ACCESS_TOKEN_COOKIE, accessToken).toString());
+        response.addHeader("Set-Cookie", buildSessionCookie(REFRESH_TOKEN_COOKIE, refreshToken).toString());
+    }
+
+    private void setPersistentTokenCookies(
+            final HttpServletResponse response,
+            final String accessToken,
+            final String refreshToken
+    ) {
+        final long refreshMaxAge = securityProperties.jwt().rememberMeRefreshTokenExpirationMs() / 1000;
+
+        response.addHeader("Set-Cookie", buildSessionCookie(ACCESS_TOKEN_COOKIE, accessToken).toString());
+        response.addHeader("Set-Cookie", buildPersistentCookie(REFRESH_TOKEN_COOKIE, refreshToken, refreshMaxAge).toString());
+    }
+
+    private ResponseCookie buildSessionCookie(final String name, final String value) {
+        return baseCookie(name, value).build();
+    }
+
+    private ResponseCookie buildPersistentCookie(final String name, final String value, final long maxAgeSeconds) {
+        return baseCookie(name, value)
+                .maxAge(maxAgeSeconds)
+                .build();
+    }
+
+    private ResponseCookie.ResponseCookieBuilder baseCookie(final String name, final String value) {
         return ResponseCookie.from(name, value)
                 .httpOnly(securityProperties.cookie().httpOnly())
                 .secure(securityProperties.cookie().secure())
                 .path("/")
                 .domain(securityProperties.cookie().domain())
-                .maxAge(maxAgeSeconds)
-                .sameSite(securityProperties.cookie().sameSite())
-                .build();
+                .sameSite(securityProperties.cookie().sameSite());
     }
 }

@@ -137,9 +137,9 @@ public class AuthServiceImpl implements AuthService {
         }
 
         final String accessToken = jwtService.generateAccessToken(user);
-        final String refreshToken = jwtService.generateRefreshToken(user);
+        final String refreshToken = jwtService.generateRefreshToken(user, request.rememberMe());
 
-        cookieUtils.setTokenCookies(response, accessToken, refreshToken);
+        cookieUtils.setTokenCookies(response, accessToken, refreshToken, request.rememberMe());
 
         return new LoginResponse(user.getId(), user.getEmail(), fullName, user.getRole().name());
     }
@@ -157,7 +157,7 @@ public class AuthServiceImpl implements AuthService {
                     .orElseThrow(() -> new ApiException("User not found.", HttpStatus.UNAUTHORIZED));
 
             final String newAccessToken = jwtService.generateAccessToken(user);
-            cookieUtils.setTokenCookies(response, newAccessToken, refreshToken);
+            cookieUtils.setAccessTokenCookie(response, newAccessToken);
         } catch (Exception e) {
             throw new ApiException("Invalid or expired refresh token.", HttpStatus.UNAUTHORIZED);
         }

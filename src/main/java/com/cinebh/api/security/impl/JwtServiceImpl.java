@@ -31,7 +31,16 @@ public class JwtServiceImpl implements JwtService {
 
     @Override
     public String generateRefreshToken(final User user) {
-        return buildToken(Map.of(), user.getEmail(), securityProperties.jwt().refreshTokenExpirationMs());
+        return generateRefreshToken(user, false);
+    }
+
+    @Override
+    public String generateRefreshToken(final User user, final boolean rememberMe) {
+        final long expirationMs = rememberMe
+                ? securityProperties.jwt().rememberMeRefreshTokenExpirationMs()
+                : securityProperties.jwt().refreshTokenExpirationMs();
+
+        return buildToken(Map.of(), user.getEmail(), expirationMs);
     }
 
     @Override

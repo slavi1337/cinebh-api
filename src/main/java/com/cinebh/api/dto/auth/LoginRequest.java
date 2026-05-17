@@ -12,7 +12,10 @@ public record LoginRequest(
 
         @Schema(description = "User's password", example = "SecurePass123!")
         @NotBlank(message = "Password is required")
-        String password
+        String password,
+
+        @Schema(description = "Whether user wants to stay logged in after closing the browser", example = "false")
+        boolean rememberMe
 ) {
     public LoginRequest {
         if (email != null) {
