@@ -75,15 +75,15 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
         final String tld = domain.contains(".") ? domain.substring(domain.lastIndexOf(".") + 1).toUpperCase() : "";
 
         if (!validTlds.isEmpty() && !validTlds.contains(tld)) {
-            throw new ApiException("Invalid email domain TLD.", HttpStatus.BAD_REQUEST);
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10003, "email", "Invalid email domain TLD.");
         }
 
         if (disposableDomains.contains(domain)) {
-            throw new ApiException("Temporary or disposable emails are not allowed.", HttpStatus.BAD_REQUEST);
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10004, "email", "Temporary or disposable emails are not allowed.");
         }
 
         if (!hasMxRecord(domain)) {
-            throw new ApiException("Email domain cannot receive messages (No MX records).", HttpStatus.BAD_REQUEST);
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10005, "email", "Email domain cannot receive messages (No MX records).");
         }
     }
 
@@ -100,7 +100,7 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
                     .body(String.class);
 
             if (response != null && response.contains(suffix)) {
-                throw new ApiException("Password has been compromised in a data breach. Please choose a different one.", HttpStatus.BAD_REQUEST);
+                throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10006, "password", "Password has been compromised in a data breach. Please choose a different one.");
             }
         } catch (ApiException e) {
             throw e;
@@ -224,20 +224,20 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
             final PhoneNumberUtil.PhoneNumberType type = phoneUtil.getNumberType(numberProto);
 
             if (!isValid || (type != PhoneNumberUtil.PhoneNumberType.MOBILE && type != PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE)) {
-                throw new ApiException("Invalid phone number. Must be a valid international mobile number.", HttpStatus.BAD_REQUEST);
+                throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10007, "phone", "Invalid phone number. Must be a valid international mobile number.");
             }
         } catch (NumberParseException e) {
-            throw new ApiException("Invalid phone number format.", HttpStatus.BAD_REQUEST);
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10008, "phone", "Invalid phone number format.");
         }
     }
 
     @Override
     public void validateNameNotReserved(final String firstName, final String lastName) {
         if (firstName != null && RESERVED_NAMES.contains(firstName.toLowerCase())) {
-            throw new ApiException("The provided first name is a reserved system keyword.", HttpStatus.BAD_REQUEST);
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10013, "firstName", "The provided first name is a reserved system keyword.");
         }
         if (lastName != null && RESERVED_NAMES.contains(lastName.toLowerCase())) {
-            throw new ApiException("The provided last name is a reserved system keyword.", HttpStatus.BAD_REQUEST);
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10014, "lastName", "The provided last name is a reserved system keyword.");
         }
     }
 
@@ -254,25 +254,25 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
                     .toBodilessEntity();
 
             if (!response.getStatusCode().is2xxSuccessful()) {
-                throw new ApiException("Image URL is unreachable (HTTP " + response.getStatusCode().value() + ").", HttpStatus.BAD_REQUEST);
+                throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10009, "profileImageUrl", "Image URL is unreachable (HTTP " + response.getStatusCode().value() + ").");
             }
 
             final HttpHeaders headers = response.getHeaders();
 
             final MediaType contentType = headers.getContentType();
             if (contentType == null || !contentType.getType().equalsIgnoreCase("image")) {
-                throw new ApiException("The provided URL does not point to a valid image.", HttpStatus.BAD_REQUEST);
+                throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10010, "profileImageUrl", "The provided URL does not point to a valid image.");
             }
 
             final long contentLength = headers.getContentLength();
             if (contentLength > 5 * 1024 * 1024) {
-                throw new ApiException("The image is too large. Maximum allowed size is 5MB.", HttpStatus.BAD_REQUEST);
+                throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10011, "profileImageUrl", "The image is too large. Maximum allowed size is 5MB.");
             }
 
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
-            throw new ApiException("Failed to validate image URL. Ensure the link is publicly accessible.", HttpStatus.BAD_REQUEST);
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10012, "profileImageUrl", "Failed to validate image URL. Ensure the link is publicly accessible.");
         }
     }
 }

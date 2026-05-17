@@ -37,7 +37,11 @@ public class AuthController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "User registered successfully, verification email sent"),
-            @ApiResponse(responseCode = "400", description = "Invalid payload or email already exists"),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid payload or validation failed. Possible reasons: invalid DTO format, duplicate email/phone, compromised password, " +
+                            "invalid email domain (MX/TLD/Disposable), reserved keywords, or unreachable/invalid profile image URL."
+            ),
             @ApiResponse(responseCode = "500", description = "Unexpected server error")
     })
     public ResponseEntity<Void> signup(
