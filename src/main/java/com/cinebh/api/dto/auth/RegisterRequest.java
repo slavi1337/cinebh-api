@@ -18,7 +18,7 @@ public record RegisterRequest(
 
         @Schema(description = "User's password", example = "SecurePass123!")
         @NotBlank(message = "Password is required")
-        @Size(min = 8, max = 48, message = "Password must be between 8 and 48 characters")
+        @Size(min = 9, max = 47, message = "Password must contain more than 8 and less than 48 characters.")
         @Pattern(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$",
                 message = "Password must contain at least one uppercase letter, one lowercase letter, and one number"
