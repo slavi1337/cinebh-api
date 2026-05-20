@@ -17,6 +17,7 @@ import com.cinebh.api.services.AuthService;
 import com.cinebh.api.services.NotificationService;
 import com.cinebh.api.services.VerificationService;
 import com.cinebh.api.utils.CookieUtils;
+import com.cinebh.api.utils.SecurityUtils;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -42,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     private final AdvancedValidationService advancedValidationService;
     private final JwtService jwtService;
     private final CookieUtils cookieUtils;
+    private final SecurityUtils securityUtils;
 
     @Override
     @Transactional
@@ -83,12 +85,8 @@ public class AuthServiceImpl implements AuthService {
             throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10002, "email/phone", "Email or Phone number is already in use.");
         }
 
-        final String fullName = (user.getFirstName() != null && user.getLastName() != null)
-                ? user.getFirstName() + " " + user.getLastName()
-                : user.getEmail().split("@")[0];
-
         final String code = verificationService.generateAndSaveCode(user, VerificationCodeType.ACCOUNT_VERIFICATION);
-        notificationService.sendAccountVerificationCode(user.getEmail(), fullName, code);
+        notificationService.sendAccountVerificationCode(user.getEmail(), getFullName(user), code);
     }
 
     @Override
@@ -126,9 +124,7 @@ public class AuthServiceImpl implements AuthService {
             throw new ApiException("Invalid email or password.", HttpStatus.UNAUTHORIZED);
         }
 
-        final String fullName = (user.getFirstName() != null && user.getLastName() != null)
-                ? user.getFirstName() + " " + user.getLastName()
-                : user.getEmail().split("@")[0];
+        final String fullName = getFullName(user);
 
         if (!user.isActive()) {
             final String code = verificationService.generateAndSaveCode(user, VerificationCodeType.ACCOUNT_VERIFICATION);
@@ -142,6 +138,13 @@ public class AuthServiceImpl implements AuthService {
         cookieUtils.setTokenCookies(response, accessToken, refreshToken, request.rememberMe());
 
         return new LoginResponse(user.getId(), user.getEmail(), fullName, user.getRole().name());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LoginResponse getCurrentUser() {
+        final User user = securityUtils.getCurrentUser();
+        return new LoginResponse(user.getId(), user.getEmail(), getFullName(user), user.getRole().name());
     }
 
     @Override
@@ -166,5 +169,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logout(final HttpServletResponse response) {
         cookieUtils.clearTokenCookies(response);
+    }
+
+    private String getFullName(final User user) {
+        return (user.getFirstName() != null && user.getLastName() != null)
+                ? user.getFirstName() + " " + user.getLastName()
+                : user.getEmail().split("@")[0];
     }
 }
