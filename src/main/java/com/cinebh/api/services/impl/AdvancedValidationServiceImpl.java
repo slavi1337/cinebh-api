@@ -37,7 +37,8 @@ import com.google.i18n.phonenumbers.Phonenumber;
 public class AdvancedValidationServiceImpl implements AdvancedValidationService {
 
     private static final Logger log = LoggerFactory.getLogger(AdvancedValidationServiceImpl.class);
-
+    private static final PhoneNumberUtil PHONE_NUMBER_UTIL = PhoneNumberUtil.getInstance();
+    private static final long MAX_IMAGE_SIZE_BYTES = 5L * 1024 * 1024;
     private static final String IANA_TLD_URL = "https://data.iana.org/TLD/tlds-alpha-by-domain.txt";
     private static final String DISPOSABLE_DOMAINS_URL = "https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/master/disposable_email_blocklist.conf";
     private static final String PWNED_API_URL = "https://api.pwnedpasswords.com/range/";
@@ -217,11 +218,10 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
             return;
         }
 
-        final PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
         try {
-            final Phonenumber.PhoneNumber numberProto = phoneUtil.parse(phone, null);
-            final boolean isValid = phoneUtil.isValidNumber(numberProto);
-            final PhoneNumberUtil.PhoneNumberType type = phoneUtil.getNumberType(numberProto);
+            final Phonenumber.PhoneNumber numberProto = PHONE_NUMBER_UTIL.parse(phone, null);
+            final boolean isValid = PHONE_NUMBER_UTIL.isValidNumber(numberProto);
+            final PhoneNumberUtil.PhoneNumberType type = PHONE_NUMBER_UTIL.getNumberType(numberProto);
 
             if (!isValid || (type != PhoneNumberUtil.PhoneNumberType.MOBILE && type != PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE)) {
                 throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10007, "phone", "Invalid phone number. Must be a valid international mobile number.");
@@ -265,8 +265,13 @@ public class AdvancedValidationServiceImpl implements AdvancedValidationService 
             }
 
             final long contentLength = headers.getContentLength();
-            if (contentLength > 5 * 1024 * 1024) {
-                throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10011, "profileImageUrl", "The image is too large. Maximum allowed size is 5MB.");
+
+            if (contentLength == -1) {
+                throw new ApiException("Unable to determine image size.", HttpStatus.BAD_REQUEST);
+            }
+
+            if (contentLength > MAX_IMAGE_SIZE_BYTES) {
+                throw new ApiException("Image size must be less than 5MB.", HttpStatus.BAD_REQUEST);
             }
 
         } catch (ApiException e) {

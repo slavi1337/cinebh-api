@@ -37,7 +37,10 @@ public record RegisterRequest(
         String phone,
 
         @Schema(description = "Profile image URL", example = "https://placehold.co/600x400")
-        @Pattern(regexp = "^(http|https)://.*", message = "Must be a valid URL")
+        @Pattern(
+                regexp = "^https?://[A-Za-z0-9.-]+\\.[A-Za-z]{2,}(?::\\d{1,5})?(?:/[^\\s]*)?$",
+                message = "Must be a valid URL"
+        )
         String profileImageUrl,
 
         @Schema(description = "City ID")

@@ -21,6 +21,7 @@ import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -78,7 +79,7 @@ public class AuthServiceImpl implements AuthService {
 
         try {
             userRepository.saveAndFlush(user);
-        } catch (org.springframework.dao.DataIntegrityViolationException exception) {
+        } catch (DataIntegrityViolationException exception) {
             throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10002, "email/phone", "Email or Phone number is already in use.");
         }
 
