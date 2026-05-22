@@ -20,6 +20,18 @@ spring:
     redis:
       host: localhost
       port: 6379
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - email
+              - profile
+            redirect-uri: "{baseUrl}/api/v1/login/oauth2/code/{registrationId}"
 
 server:
   port: 8443
@@ -31,6 +43,8 @@ server:
     key-alias: cinebh
 
 app:
+  frontend:
+    base-url: https://cinebh.com:5173
   storage:
     bucket: cinebh
     region: eu-central-1

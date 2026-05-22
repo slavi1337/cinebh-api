@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -84,6 +85,19 @@ public class AuthController {
             final HttpServletResponse response
     ) {
         return ResponseEntity.ok(authService.login(loginRequest, response));
+    }
+
+    @GetMapping("/me")
+    @Operation(
+            summary = "Get current authenticated user",
+            description = "Returns the currently authenticated user based on JWT cookie"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Current user returned successfully"),
+            @ApiResponse(responseCode = "401", description = "User not authenticated")
+    })
+    public ResponseEntity<LoginResponse> getCurrentUser() {
+        return ResponseEntity.ok(authService.getCurrentUser());
     }
 
     @PostMapping("/logout")
