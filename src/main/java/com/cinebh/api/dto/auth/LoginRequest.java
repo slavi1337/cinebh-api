@@ -14,7 +14,11 @@ public record LoginRequest(
         @NotBlank(message = "Password is required")
         String password,
 
-        @Schema(description = "Whether user wants to stay logged in after closing the browser", example = "false")
+        @Schema(
+                description = "Whether user wants to stay logged in after closing the browser",
+                example = "false",
+                defaultValue = "false"
+        )
         boolean rememberMe
 ) {
     public LoginRequest {
