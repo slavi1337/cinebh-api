@@ -4,11 +4,13 @@ import com.cinebh.api.dto.auth.LoginRequest;
 import com.cinebh.api.dto.auth.LoginResponse;
 import com.cinebh.api.dto.auth.RegisterRequest;
 import com.cinebh.api.dto.auth.VerifyRequest;
+import com.cinebh.api.entities.City;
 import com.cinebh.api.entities.User;
 import com.cinebh.api.entities.enums.UserRole;
 import com.cinebh.api.entities.enums.VerificationCodeType;
 import com.cinebh.api.exceptions.ApiException;
 import com.cinebh.api.repositories.UserRepository;
+import com.cinebh.api.repositories.CityRepository;
 import com.cinebh.api.security.JwtService;
 import com.cinebh.api.services.AdvancedValidationService;
 import com.cinebh.api.services.AuthService;
@@ -19,6 +21,7 @@ import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,6 +35,7 @@ import java.util.UUID;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final CityRepository cityRepository;
     private final PasswordEncoder passwordEncoder;
     private final VerificationService verificationService;
     private final NotificationService notificationService;
@@ -46,28 +50,45 @@ public class AuthServiceImpl implements AuthService {
             final String message = existingUser.isActive()
                     ? "Email is already in use."
                     : "Account already exists but is not verified. Please proceed to login to receive a new verification code.";
-            throw new ApiException(message, HttpStatus.BAD_REQUEST);
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10001, "email", message);
         });
 
         advancedValidationService.validateEmailDomain(request.email());
         advancedValidationService.validatePasswordPwned(request.password());
+        advancedValidationService.validatePhone(request.phone());
+        advancedValidationService.validateNameNotReserved(request.firstName(), request.lastName());
+        advancedValidationService.validateImageUrl(request.profileImageUrl());
 
         final User user = new User();
         user.setId(UUID.randomUUID());
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.setFirstName(request.firstName());
+        user.setLastName(request.lastName());
+        user.setPhone(request.phone());
+        user.setProfileImageUrl(request.profileImageUrl());
+        user.setStreetAddress(request.streetAddress());
+        if (request.cityId() != null) {
+            final City city = cityRepository.findById(request.cityId())
+                    .orElseThrow(() -> new ApiException("Invalid location selected.", HttpStatus.BAD_REQUEST));
+            user.setCity(city);
+        }
         user.setRole(UserRole.CUSTOMER);
         user.setActive(false);
         user.setCreatedAt(OffsetDateTime.now());
 
         try {
             userRepository.saveAndFlush(user);
-        } catch (org.springframework.dao.DataIntegrityViolationException exception) {
-            throw new ApiException("Email is already in use. If unverified, please proceed to login.", HttpStatus.BAD_REQUEST);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ApiException("User DTO validation failed.", HttpStatus.BAD_REQUEST, 10002, "email/phone", "Email or Phone number is already in use.");
         }
 
+        final String fullName = (user.getFirstName() != null && user.getLastName() != null)
+                ? user.getFirstName() + " " + user.getLastName()
+                : user.getEmail().split("@")[0];
+
         final String code = verificationService.generateAndSaveCode(user, VerificationCodeType.ACCOUNT_VERIFICATION);
-        notificationService.sendAccountVerificationCode(user.getEmail(), user.getEmail().split("@")[0], code);
+        notificationService.sendAccountVerificationCode(user.getEmail(), fullName, code);
     }
 
     @Override
@@ -105,9 +126,13 @@ public class AuthServiceImpl implements AuthService {
             throw new ApiException("Invalid email or password.", HttpStatus.UNAUTHORIZED);
         }
 
+        final String fullName = (user.getFirstName() != null && user.getLastName() != null)
+                ? user.getFirstName() + " " + user.getLastName()
+                : user.getEmail().split("@")[0];
+
         if (!user.isActive()) {
             final String code = verificationService.generateAndSaveCode(user, VerificationCodeType.ACCOUNT_VERIFICATION);
-            notificationService.sendAccountVerificationCode(user.getEmail(), user.getEmail().split("@")[0], code);
+            notificationService.sendAccountVerificationCode(user.getEmail(), fullName, code);
             throw new ApiException("Account is not verified. A new code has been sent to your email.", HttpStatus.FORBIDDEN);
         }
 
@@ -115,10 +140,6 @@ public class AuthServiceImpl implements AuthService {
         final String refreshToken = jwtService.generateRefreshToken(user);
 
         cookieUtils.setTokenCookies(response, accessToken, refreshToken);
-
-        final String fullName = (user.getFirstName() != null && user.getLastName() != null)
-                ? user.getFirstName() + " " + user.getLastName()
-                : user.getEmail().split("@")[0];
 
         return new LoginResponse(user.getId(), user.getEmail(), fullName, user.getRole().name());
     }
