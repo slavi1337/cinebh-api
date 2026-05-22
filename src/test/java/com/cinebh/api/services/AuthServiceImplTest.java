@@ -149,23 +149,23 @@ class AuthServiceImplTest {
 
     @Test
     void shouldLoginSuccessfully() {
-        final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123");
+        final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", false);
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches(request.password(), testUser.getPasswordHash())).thenReturn(true);
         when(jwtService.generateAccessToken(testUser)).thenReturn("access-token");
-        when(jwtService.generateRefreshToken(testUser)).thenReturn("refresh-token");
+        when(jwtService.generateRefreshToken(testUser, false)).thenReturn("refresh-token");
 
         final LoginResponse loginResponse = authService.login(request, response);
 
         assertThat(loginResponse.email()).isEqualTo(testUser.getEmail());
-        verify(cookieUtils).setTokenCookies(response, "access-token", "refresh-token");
+        verify(cookieUtils).setTokenCookies(response, "access-token", "refresh-token", false);
     }
 
     @Test
     void shouldThrowExceptionAndSendNewCodeWhenLoginInactiveUser() {
-        final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123");
+        final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", false);
         testUser.setActive(false);
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
@@ -202,7 +202,23 @@ class AuthServiceImplTest {
 
         authService.refresh(request, response);
 
-        verify(cookieUtils).setTokenCookies(response, "new-access-token", refreshToken);
+        verify(cookieUtils).setAccessTokenCookie(response, "new-access-token");
+    }
+
+    @Test
+    void shouldLoginSuccessfullyWithRememberMe() {
+        final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", true);
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches(request.password(), testUser.getPasswordHash())).thenReturn(true);
+        when(jwtService.generateAccessToken(testUser)).thenReturn("access-token");
+        when(jwtService.generateRefreshToken(testUser, true)).thenReturn("refresh-token");
+
+        final LoginResponse loginResponse = authService.login(request, response);
+
+        assertThat(loginResponse.email()).isEqualTo(testUser.getEmail());
+        verify(cookieUtils).setTokenCookies(response, "access-token", "refresh-token", true);
     }
 
     @Test
