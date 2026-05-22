@@ -1,5 +1,6 @@
 package com.cinebh.api.entities;
 
+import com.cinebh.api.entities.enums.OAuthProvider;
 import com.cinebh.api.entities.enums.UserRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -71,8 +72,9 @@ public class User {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "oauth_provider")
-    private String oauthProvider;
+    private OAuthProvider oauthProvider;
 
     @Column(name = "oauth_provider_id")
     private String oauthProviderId;

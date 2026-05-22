@@ -1,6 +1,7 @@
 package com.cinebh.api.services.impl;
 
 import com.cinebh.api.entities.User;
+import com.cinebh.api.entities.enums.OAuthProvider;
 import com.cinebh.api.entities.enums.UserRole;
 import com.cinebh.api.exceptions.ApiException;
 import com.cinebh.api.repositories.UserRepository;
@@ -18,8 +19,6 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class OAuth2AuthServiceImpl implements OAuth2AuthService {
-
-    private static final String GOOGLE_PROVIDER = "GOOGLE";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -57,7 +56,7 @@ public class OAuth2AuthServiceImpl implements OAuth2AuthService {
         user.setLastName(lastName);
         user.setProfileImageUrl(picture);
         user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
-        user.setOauthProvider(GOOGLE_PROVIDER);
+        user.setOauthProvider(OAuthProvider.GOOGLE);
         user.setOauthProviderId(googleId);
         user.setRole(UserRole.CUSTOMER);
         user.setActive(true);
@@ -74,11 +73,11 @@ public class OAuth2AuthServiceImpl implements OAuth2AuthService {
             final String picture
     ) {
         if (user.getOauthProvider() != null && user.getOauthProviderId() != null
-                && !GOOGLE_PROVIDER.equals(user.getOauthProvider())) {
+                && !OAuthProvider.GOOGLE.equals(user.getOauthProvider())) {
             throw new ApiException("This email is already linked with another login provider.", HttpStatus.CONFLICT);
         }
 
-        user.setOauthProvider(GOOGLE_PROVIDER);
+        user.setOauthProvider(OAuthProvider.GOOGLE);
         user.setOauthProviderId(googleId);
         user.setActive(true);
 

@@ -1,6 +1,7 @@
 package com.cinebh.api.config;
 
 import com.cinebh.api.security.JwtAuthenticationFilter;
+import com.cinebh.api.security.OAuth2LoginFailureHandler;
 import com.cinebh.api.security.OAuth2LoginSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -26,6 +27,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final OAuth2LoginSuccessHandler oauth2LoginSuccessHandler;
+    private final OAuth2LoginFailureHandler oauth2LoginFailureHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(final HttpSecurity http) throws Exception {
@@ -42,6 +44,7 @@ public class SecurityConfig {
                                 endpoint.baseUri("/api/v1/login/oauth2/code/*")
                         )
                         .successHandler(oauth2LoginSuccessHandler)
+                        .failureHandler(oauth2LoginFailureHandler)
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
