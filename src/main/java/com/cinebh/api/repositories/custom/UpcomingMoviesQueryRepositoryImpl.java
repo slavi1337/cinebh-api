@@ -18,6 +18,7 @@ import com.cinebh.api.utils.PaginationUtils;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -147,12 +148,12 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
                 queryFactory.select(Projections.constructor(
                         UpcomingFilterOptionResponse.class,
                         venue.id,
-                        venue.name
+                        venueLabelExpression()
                 ))
         )
                 .where(predicate)
-                .groupBy(venue.id, venue.name)
-                .orderBy(venue.name.asc())
+                .groupBy(venue.id, venue.name, city.name)
+                .orderBy(venue.name.asc(), city.name.asc())
                 .fetch();
     }
 
@@ -261,6 +262,10 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
                 .join(projection.hall, hall)
                 .join(hall.venue, venue)
                 .join(venue.city, city);
+    }
+
+    private StringExpression venueLabelExpression() {
+        return venue.name.concat(" (").concat(city.name).concat(")");
     }
 
     private static class UpcomingMovieAccumulator {

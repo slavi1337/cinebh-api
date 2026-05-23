@@ -115,4 +115,15 @@ class CurrentlyShowingControllerTest {
 
         verify(currentlyShowingService).getVenuesByCities(any());
     }
+
+    @Test
+    void shouldReturnBadRequestWhenCityIdsHaveInvalidFormat() throws Exception {
+        expectErrorResponse(
+                mockMvc.perform(getJson(VENUES_FILTER_URL)
+                                .param("cityIds", "abc"))
+                        .andExpect(status().isBadRequest()),
+                "Invalid request parameter format.",
+                400
+        );
+    }
 }

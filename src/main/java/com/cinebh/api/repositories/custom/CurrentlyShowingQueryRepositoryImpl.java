@@ -19,6 +19,7 @@ import com.cinebh.api.utils.PaginationUtils;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -115,10 +116,11 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                 .select(Projections.constructor(
                         FilterOptionResponse.class,
                         venue.id,
-                        venue.name
+                        venueLabelExpression()
                 ))
                 .from(venue)
-                .orderBy(venue.name.asc())
+                .join(venue.city, city)
+                .orderBy(venue.name.asc(), city.name.asc())
                 .fetch();
 
         final List<FilterOptionResponse> genres = queryFactory
@@ -133,7 +135,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
 
         return new CurrentlyShowingFiltersResponse(cities, venues, genres);
     }
-
+    
     @Override
     public List<FilterOptionResponse> findVenuesByCityIds(final List<UUID> cityIds) {
         if (cityIds == null || cityIds.isEmpty()) {
@@ -141,10 +143,11 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                     .select(Projections.constructor(
                             FilterOptionResponse.class,
                             venue.id,
-                            venue.name
+                            venueLabelExpression()
                     ))
                     .from(venue)
-                    .orderBy(venue.name.asc())
+                    .join(venue.city, city)
+                    .orderBy(venue.name.asc(), city.name.asc())
                     .fetch();
         }
 
@@ -152,12 +155,12 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                 .select(Projections.constructor(
                         FilterOptionResponse.class,
                         venue.id,
-                        venue.name
+                        venueLabelExpression()
                 ))
                 .from(venue)
                 .join(venue.city, city)
                 .where(city.id.in(cityIds))
-                .orderBy(venue.name.asc())
+                .orderBy(venue.name.asc(), city.name.asc())
                 .fetch();
     }
 
@@ -355,6 +358,10 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                 .join(projection.hall, hall)
                 .join(hall.venue, venue)
                 .join(venue.city, city);
+    }
+
+    private StringExpression venueLabelExpression() {
+        return venue.name.concat(" (").concat(city.name).concat(")");
     }
 
     private static class MovieAccumulator {
