@@ -19,6 +19,7 @@ import com.cinebh.api.utils.PaginationUtils;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -361,7 +362,11 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
     }
 
     private StringExpression venueLabelExpression() {
-        return venue.name.concat(" (").concat(city.name).concat(")");
+        return Expressions.stringTemplate(
+                "concat({0}, ' (', {1}, ')')",
+                venue.name,
+                city.name
+        );
     }
 
     private static class MovieAccumulator {
