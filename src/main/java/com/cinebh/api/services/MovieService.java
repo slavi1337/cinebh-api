@@ -3,13 +3,19 @@ package com.cinebh.api.services;
 import com.cinebh.api.dto.common.PageResponse;
 import com.cinebh.api.dto.movie.HeroMovieResponse;
 import com.cinebh.api.dto.movie.MovieCardResponse;
+import com.cinebh.api.dto.movie.MovieDetailsResponse;
+import com.cinebh.api.dto.movie.MovieProjectionResponse;
+import com.cinebh.api.dto.movie.MovieProjectionSearchRequest;
+import com.cinebh.api.exceptions.ApiException;
 import com.cinebh.api.repositories.MovieRepository;
 import com.cinebh.api.utils.PaginationUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -34,5 +40,21 @@ public class MovieService {
                 PaginationUtils.normalizePage(page),
                 PaginationUtils.normalizeSize(size)
         );
+    }
+
+    public MovieDetailsResponse getMovieDetails(final UUID movieId) {
+        return movieRepository.findMovieDetailsById(movieId)
+                .orElseThrow(() -> new ApiException("Movie not found.", HttpStatus.NOT_FOUND));
+    }
+
+    public List<MovieProjectionResponse> getMovieProjections(
+            final UUID movieId,
+            final MovieProjectionSearchRequest searchRequest
+    ) {
+        if (!movieRepository.existsById(movieId)) {
+            throw new ApiException("Movie not found.", HttpStatus.NOT_FOUND);
+        }
+
+        return movieRepository.findMovieProjections(movieId, searchRequest);
     }
 }
