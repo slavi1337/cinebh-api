@@ -37,12 +37,6 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 ).oauth2Login(oauth2 -> oauth2
-                        .authorizationEndpoint(endpoint ->
-                                endpoint.baseUri("/api/v1/oauth2/authorization")
-                        )
-                        .redirectionEndpoint(endpoint ->
-                                endpoint.baseUri("/api/v1/login/oauth2/code/*")
-                        )
                         .successHandler(oauth2LoginSuccessHandler)
                         .failureHandler(oauth2LoginFailureHandler)
                 )
@@ -60,8 +54,8 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/**",
-                                "/api/v1/oauth2/**",
-                                "/api/v1/login/oauth2/**"
+                                "/oauth2/**",
+                                "/login/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
