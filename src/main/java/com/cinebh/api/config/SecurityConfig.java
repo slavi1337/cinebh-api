@@ -35,7 +35,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 ).oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(endpoint ->
                                 endpoint.baseUri("/api/v1/oauth2/authorization")
