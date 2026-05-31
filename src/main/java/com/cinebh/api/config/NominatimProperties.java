@@ -7,6 +7,7 @@ public record NominatimProperties(
         boolean enabled,
         String baseUrl,
         String userAgent,
-        String countryCodes
+        String countryCodes,
+        String countryName
 ) {
 }
