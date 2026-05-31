@@ -41,23 +41,7 @@ public class SecurityConfig {
                         .failureHandler(oauth2LoginFailureHandler)
                 )
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**"
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/v1/movies/**",
-                                "/api/v1/venues/**",
-                                "/api/v1/currently-showing/**",
-                                "/api/v1/upcoming-movies/**"
-                        ).permitAll()
-                        .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/oauth2/**",
-                                "/login/**"
-                        ).permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
