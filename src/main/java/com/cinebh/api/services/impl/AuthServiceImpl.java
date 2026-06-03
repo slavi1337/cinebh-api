@@ -12,10 +12,7 @@ import com.cinebh.api.exceptions.ApiException;
 import com.cinebh.api.repositories.UserRepository;
 import com.cinebh.api.repositories.CityRepository;
 import com.cinebh.api.security.JwtService;
-import com.cinebh.api.services.AdvancedValidationService;
-import com.cinebh.api.services.AuthService;
-import com.cinebh.api.services.NotificationService;
-import com.cinebh.api.services.VerificationService;
+import com.cinebh.api.services.*;
 import com.cinebh.api.utils.CookieUtils;
 import com.cinebh.api.utils.SecurityUtils;
 import io.jsonwebtoken.Claims;
@@ -41,6 +38,7 @@ public class AuthServiceImpl implements AuthService {
     private final VerificationService verificationService;
     private final NotificationService notificationService;
     private final AdvancedValidationService advancedValidationService;
+    private final AddressValidationService addressValidationService;
     private final JwtService jwtService;
     private final CookieUtils cookieUtils;
     private final SecurityUtils securityUtils;
@@ -74,6 +72,9 @@ public class AuthServiceImpl implements AuthService {
             final City city = cityRepository.findById(request.cityId())
                     .orElseThrow(() -> new ApiException("Invalid location selected.", HttpStatus.BAD_REQUEST));
             user.setCity(city);
+            if (!addressValidationService.isValidStreetInCity(city.getName(), request.streetAddress())) {
+                throw new ApiException("Street does not exist in the selected city.", HttpStatus.BAD_REQUEST);
+            }
         }
         user.setRole(UserRole.CUSTOMER);
         user.setActive(false);

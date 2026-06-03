@@ -60,6 +60,9 @@ class AuthServiceImplTest {
     private AdvancedValidationService advancedValidationService;
 
     @Mock
+    private AddressValidationService addressValidationService;
+
+    @Mock
     private JwtService jwtService;
 
     @Mock
@@ -100,6 +103,7 @@ class AuthServiceImplTest {
         final City city = new City();
 
         when(cityRepository.findById(cityId)).thenReturn(Optional.of(city));
+        when(addressValidationService.isValidStreetInCity(city.getName(), request.streetAddress())).thenReturn(true);
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(request.password())).thenReturn("hashed-password");
         when(verificationService.generateAndSaveCode(any(User.class), eq(VerificationCodeType.ACCOUNT_VERIFICATION)))

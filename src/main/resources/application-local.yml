@@ -31,7 +31,7 @@ spring:
               - openid
               - email
               - profile
-            redirect-uri: "{baseUrl}/api/v1/login/oauth2/code/{registrationId}"
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
 
 server:
   port: 8443
@@ -63,6 +63,8 @@ app:
     cache:
       mx-record-ttl-days: 7
       mx-record-prefix: "mx_record:"
+      address-validation-ttl-days: 1
+      address-validation-prefix: "address_validation:"
   security:
     jwt:
       secret: ${JWT_SECRET}
@@ -80,3 +82,11 @@ app:
       allowed-methods: [ "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS" ]
       allowed-headers: [ "Authorization", "Content-Type", "X-Requested-With", "Accept" ]
       exposed-headers: [ "Set-Cookie" ]
+
+  nominatim:
+    enabled: true
+    base-url: https://nominatim.openstreetmap.org
+    user-agent:
+      "CineBHStudentProjectInternship/1.0 (student-project; contact: slavisa.covakusic@student.etf.unibl.org)"
+    country-codes: ba
+    country-name: Bosnia and Herzegovina

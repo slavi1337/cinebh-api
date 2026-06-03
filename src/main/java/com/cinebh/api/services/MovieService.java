@@ -6,55 +6,19 @@ import com.cinebh.api.dto.movie.MovieCardResponse;
 import com.cinebh.api.dto.movie.MovieDetailsResponse;
 import com.cinebh.api.dto.movie.MovieProjectionResponse;
 import com.cinebh.api.dto.movie.MovieProjectionSearchRequest;
-import com.cinebh.api.exceptions.ApiException;
-import com.cinebh.api.repositories.MovieRepository;
-import com.cinebh.api.utils.PaginationUtils;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
-@Service
-@RequiredArgsConstructor
-@Transactional(readOnly = true)
-public class MovieService {
+public interface MovieService {
 
-    private final MovieRepository movieRepository;
+    List<HeroMovieResponse> getHeroMovies();
 
-    public List<HeroMovieResponse> getHeroMovies() {
-        return movieRepository.findHeroMovies();
-    }
+    PageResponse<MovieCardResponse> getCurrentlyShowing(Integer page, Integer size);
 
-    public PageResponse<MovieCardResponse> getCurrentlyShowing(final Integer page, final Integer size) {
-        return movieRepository.findCurrentlyShowing(
-                PaginationUtils.normalizePage(page),
-                PaginationUtils.normalizeSize(size)
-        );
-    }
+    PageResponse<MovieCardResponse> getUpcomingMovies(Integer page, Integer size);
 
-    public PageResponse<MovieCardResponse> getUpcomingMovies(final Integer page, final Integer size) {
-        return movieRepository.findUpcomingMovies(
-                PaginationUtils.normalizePage(page),
-                PaginationUtils.normalizeSize(size)
-        );
-    }
+    MovieDetailsResponse getMovieDetails(UUID movieId);
 
-    public MovieDetailsResponse getMovieDetails(final UUID movieId) {
-        return movieRepository.findMovieDetailsById(movieId)
-                .orElseThrow(() -> new ApiException("Movie not found.", HttpStatus.NOT_FOUND));
-    }
-
-    public List<MovieProjectionResponse> getMovieProjections(
-            final UUID movieId,
-            final MovieProjectionSearchRequest searchRequest
-    ) {
-        if (!movieRepository.existsById(movieId)) {
-            throw new ApiException("Movie not found.", HttpStatus.NOT_FOUND);
-        }
-
-        return movieRepository.findMovieProjections(movieId, searchRequest);
-    }
+    List<MovieProjectionResponse> getMovieProjections(UUID movieId, MovieProjectionSearchRequest searchRequest);
 }

@@ -199,13 +199,13 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
         }
 
         final List<UpcomingMovieResponse> result = new ArrayList<>();
+        final Map<UUID, List<String>> venuesByMovieId = findVenuesByMovieIds(movieIds);
 
         for (final UUID movieId : movieIds) {
             final UpcomingMovieAccumulator accumulator = accumulatorMap.get(movieId);
             if (accumulator == null) {
                 continue;
             }
-            final Map<UUID, List<String>> venuesByMovieId = findVenuesByMovieIds(movieIds);
             result.add(new UpcomingMovieResponse(
                     accumulator.movieId,
                     accumulator.title,

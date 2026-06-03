@@ -4,6 +4,7 @@ import com.cinebh.api.dto.common.PageResponse;
 import com.cinebh.api.dto.movie.HeroMovieResponse;
 import com.cinebh.api.dto.movie.MovieCardResponse;
 import com.cinebh.api.repositories.MovieRepository;
+import com.cinebh.api.services.impl.MovieServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,7 +29,7 @@ class MovieServiceTest {
     private MovieRepository movieRepository;
 
     @InjectMocks
-    private MovieService movieService;
+    private MovieServiceImpl movieService;
 
     @Test
     void shouldReturnHeroMoviesFromRepository() {

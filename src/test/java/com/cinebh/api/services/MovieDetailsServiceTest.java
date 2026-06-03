@@ -8,6 +8,7 @@ import com.cinebh.api.dto.movie.MovieProjectionResponse;
 import com.cinebh.api.dto.movie.MovieProjectionSearchRequest;
 import com.cinebh.api.exceptions.ApiException;
 import com.cinebh.api.repositories.MovieRepository;
+import com.cinebh.api.services.impl.MovieServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,7 +39,7 @@ class MovieDetailsServiceTest {
     @Mock
     private MovieRepository movieRepository;
     @InjectMocks
-    private MovieService movieService;
+    private MovieServiceImpl movieService;
 
     @Test
     void shouldReturnMovieDetailsWhenMovieExists() {

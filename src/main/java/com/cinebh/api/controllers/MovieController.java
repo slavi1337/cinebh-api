@@ -119,7 +119,7 @@ public class MovieController {
     })
     public ResponseEntity<List<MovieProjectionResponse>> getMovieProjections(
             @PathVariable UUID movieId,
-            @Valid @ModelAttribute @ParameterObject MovieProjectionSearchRequest searchRequest
+            @ModelAttribute @ParameterObject MovieProjectionSearchRequest searchRequest
     ) {
         return ResponseEntity.ok(movieService.getMovieProjections(movieId, searchRequest));
     }
