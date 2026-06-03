@@ -149,11 +149,12 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
                 queryFactory.select(Projections.constructor(
                         UpcomingFilterOptionResponse.class,
                         venue.id,
-                        venueLabelExpression()
+                        venueLabelExpression(),
+                        city.id
                 ))
         )
                 .where(predicate)
-                .groupBy(venue.id, venue.name, city.name)
+                .groupBy(venue.id, venue.name, city.id, city.name)
                 .orderBy(venue.name.asc(), city.name.asc())
                 .fetch();
     }

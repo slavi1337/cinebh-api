@@ -113,16 +113,7 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                 .orderBy(city.name.asc())
                 .fetch();
 
-        final List<FilterOptionResponse> venues = queryFactory
-                .select(Projections.constructor(
-                        FilterOptionResponse.class,
-                        venue.id,
-                        venueLabelExpression()
-                ))
-                .from(venue)
-                .join(venue.city, city)
-                .orderBy(venue.name.asc(), city.name.asc())
-                .fetch();
+        final List<FilterOptionResponse> venues = findVenueFilterOptions(null);
 
         final List<FilterOptionResponse> genres = queryFactory
                 .select(Projections.constructor(
@@ -139,30 +130,25 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
     
     @Override
     public List<FilterOptionResponse> findVenuesByCityIds(final List<UUID> cityIds) {
-        if (cityIds == null || cityIds.isEmpty()) {
-            return queryFactory
-                    .select(Projections.constructor(
-                            FilterOptionResponse.class,
-                            venue.id,
-                            venueLabelExpression()
-                    ))
-                    .from(venue)
-                    .join(venue.city, city)
-                    .orderBy(venue.name.asc(), city.name.asc())
-                    .fetch();
-        }
+        return findVenueFilterOptions(cityIds);
+    }
 
-        return queryFactory
+    private List<FilterOptionResponse> findVenueFilterOptions(final List<UUID> cityIds) {
+        final JPAQuery<FilterOptionResponse> query = queryFactory
                 .select(Projections.constructor(
                         FilterOptionResponse.class,
                         venue.id,
-                        venueLabelExpression()
+                        venueLabelExpression(),
+                        city.id
                 ))
                 .from(venue)
-                .join(venue.city, city)
-                .where(city.id.in(cityIds))
-                .orderBy(venue.name.asc(), city.name.asc())
-                .fetch();
+                .join(venue.city, city);
+
+        if (cityIds != null && !cityIds.isEmpty()) {
+            query.where(city.id.in(cityIds));
+        }
+
+        return query.orderBy(venue.name.asc(), city.name.asc()).fetch();
     }
 
     private List<CurrentlyShowingMovieResponse> mapCurrentlyShowingMovies(
