@@ -205,13 +205,14 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
             if (accumulator == null) {
                 continue;
             }
-
+            final Map<UUID, List<String>> venuesByMovieId = findVenuesByMovieIds(movieIds);
             result.add(new UpcomingMovieResponse(
                     accumulator.movieId,
                     accumulator.title,
                     accumulator.posterImageUrl,
                     accumulator.durationMinutes,
                     new ArrayList<>(accumulator.genres),
+                    venuesByMovieId.getOrDefault(movieId, List.of()),
                     accumulator.openingDate
             ));
         }
@@ -273,6 +274,29 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
         );
     }
 
+    private Map<UUID, List<String>> findVenuesByMovieIds(final List<UUID> movieIds) {
+        final List<Tuple> rows = applyProjectionVenueCityGraph(
+                queryFactory.select(
+                        movie.id,
+                        venueLabelExpression()
+                )
+        )
+                .where(movie.id.in(movieIds))
+                .groupBy(movie.id, venue.id, venue.name, city.name)
+                .orderBy(venue.name.asc(), city.name.asc())
+                .fetch();
+        final Map<UUID, List<String>> result = new LinkedHashMap<>();
+        for (final Tuple row : rows) {
+            final UUID movieId = row.get(movie.id);
+            final String venueLabel = row.get(venueLabelExpression());
+            if (movieId == null || venueLabel == null) {
+                continue;
+            }
+            result.computeIfAbsent(movieId, ignored -> new ArrayList<>()).add(venueLabel);
+        }
+        return result;
+    }
+
     private static class UpcomingMovieAccumulator {
         private final Set<String> genres = new LinkedHashSet<>();
         private UUID movieId;
@@ -281,4 +305,5 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
         private Integer durationMinutes;
         private LocalDate openingDate;
     }
+
 }

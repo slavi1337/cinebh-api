@@ -15,6 +15,7 @@ import org.hibernate.type.SqlTypes;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 @Getter
 @NoArgsConstructor
@@ -59,4 +60,10 @@ public class Movie {
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
+
+    @Column(name = "imdb_rating", precision = 3, scale = 1)
+    private BigDecimal imdbRating;
+
+    @Column(name = "rotten_tomatoes_rating")
+    private Integer rottenTomatoesRating;
 }

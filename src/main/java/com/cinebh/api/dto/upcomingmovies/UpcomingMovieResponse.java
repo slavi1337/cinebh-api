@@ -10,6 +10,7 @@ public record UpcomingMovieResponse(
         String posterImageUrl,
         Integer durationMinutes,
         List<String> genres,
+        List<String> venues,
         LocalDate openingDate
 ) {
 }
