@@ -1,7 +1,7 @@
 package com.cinebh.api.services;
 
 import com.cinebh.api.dto.common.PageResponse;
-import com.cinebh.api.dto.upcomingmovies.UpcomingFilterOptionResponse;
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMovieResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMoviesFiltersResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMoviesSearchRequest;
@@ -67,9 +67,9 @@ class UpcomingMoviesServiceTest {
     @Test
     void shouldReturnFiltersFromRepository() {
         final UpcomingMoviesFiltersResponse expectedResponse = new UpcomingMoviesFiltersResponse(
-                List.of(new UpcomingFilterOptionResponse(UUID.randomUUID(), "Sarajevo")),
-                List.of(new UpcomingFilterOptionResponse(UUID.randomUUID(), "Cinema City")),
-                List.of(new UpcomingFilterOptionResponse(UUID.randomUUID(), "Action"))
+                List.of(new FilterResponse(UUID.randomUUID(), "Sarajevo")),
+                List.of(new FilterResponse(UUID.randomUUID(), "Cinema City")),
+                List.of(new FilterResponse(UUID.randomUUID(), "Action"))
         );
 
         when(upcomingMoviesRepository.findFilters()).thenReturn(expectedResponse);
@@ -84,13 +84,13 @@ class UpcomingMoviesServiceTest {
     void shouldReturnVenuesByCitiesFromRepository() {
         final List<UUID> cityIds = List.of(UUID.randomUUID());
 
-        final List<UpcomingFilterOptionResponse> expectedResponse = List.of(
-                new UpcomingFilterOptionResponse(UUID.randomUUID(), "Cinema City")
+        final List<FilterResponse> expectedResponse = List.of(
+                new FilterResponse(UUID.randomUUID(), "Cinema City")
         );
 
         when(upcomingMoviesRepository.findVenuesByCityIds(cityIds)).thenReturn(expectedResponse);
 
-        final List<UpcomingFilterOptionResponse> actualResponse =
+        final List<FilterResponse> actualResponse =
                 upcomingMoviesService.getVenuesByCities(cityIds);
 
         assertThat(actualResponse).isEqualTo(expectedResponse);

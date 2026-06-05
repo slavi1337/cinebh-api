@@ -1,5 +1,6 @@
 package com.cinebh.api.controllers;
 
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.common.PageResponse;
 import com.cinebh.api.dto.common.PaginationRequest;
 import com.cinebh.api.dto.currentlyshowing.*;
@@ -76,7 +77,7 @@ public class CurrentlyShowingController {
             @ApiResponse(responseCode = "200", description = "Filtered venues fetched successfully"),
             @ApiResponse(responseCode = "500", description = "Unexpected server error")
     })
-    public ResponseEntity<List<FilterOptionResponse>> getVenuesByCities(
+    public ResponseEntity<List<FilterResponse>> getVenuesByCities(
             @RequestParam(required = false) List<UUID> cityIds
     ) {
         return ResponseEntity.ok(currentlyShowingService.getVenuesByCities(cityIds));

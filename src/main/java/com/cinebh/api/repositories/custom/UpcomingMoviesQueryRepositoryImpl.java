@@ -1,7 +1,7 @@
 package com.cinebh.api.repositories.custom;
 
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.common.PageResponse;
-import com.cinebh.api.dto.upcomingmovies.UpcomingFilterOptionResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMovieResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMoviesFiltersResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMoviesSearchRequest;
@@ -102,9 +102,9 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
     public UpcomingMoviesFiltersResponse findFilters() {
         final BooleanExpression predicate = baseUpcomingPredicate();
 
-        final List<UpcomingFilterOptionResponse> cities = applyProjectionVenueCityGraph(
+        final List<FilterResponse> cities = applyProjectionVenueCityGraph(
                 queryFactory.select(Projections.constructor(
-                        UpcomingFilterOptionResponse.class,
+                        FilterResponse.class,
                         city.id,
                         city.name
                 ))
@@ -114,11 +114,11 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
                 .orderBy(city.name.asc())
                 .fetch();
 
-        final List<UpcomingFilterOptionResponse> venues = findUpcomingVenueOptions(predicate);
+        final List<FilterResponse> venues = findUpcomingVenueOptions(predicate);
 
-        final List<UpcomingFilterOptionResponse> genres = applyProjectionVenueCityGraph(
+        final List<FilterResponse> genres = applyProjectionVenueCityGraph(
                 queryFactory.select(Projections.constructor(
-                        UpcomingFilterOptionResponse.class,
+                        FilterResponse.class,
                         genre.id,
                         genre.name
                 ))
@@ -134,7 +134,7 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
     }
 
     @Override
-    public List<UpcomingFilterOptionResponse> findVenuesByCityIds(final List<UUID> cityIds) {
+    public List<FilterResponse> findVenuesByCityIds(final List<UUID> cityIds) {
         final BooleanExpression predicate = cityIds == null || cityIds.isEmpty()
                 ? baseUpcomingPredicate()
                 : baseUpcomingPredicate().and(city.id.in(cityIds));
@@ -142,18 +142,19 @@ public class UpcomingMoviesQueryRepositoryImpl implements UpcomingMoviesQueryRep
         return findUpcomingVenueOptions(predicate);
     }
 
-    private List<UpcomingFilterOptionResponse> findUpcomingVenueOptions(
+    private List<FilterResponse> findUpcomingVenueOptions(
             final BooleanExpression predicate
     ) {
         return applyProjectionVenueCityGraph(
                 queryFactory.select(Projections.constructor(
-                        UpcomingFilterOptionResponse.class,
+                        FilterResponse.class,
                         venue.id,
-                        venueLabelExpression()
+                        venueLabelExpression(),
+                        city.id
                 ))
         )
                 .where(predicate)
-                .groupBy(venue.id, venue.name, city.name)
+                .groupBy(venue.id, venue.name, city.id, city.name)
                 .orderBy(venue.name.asc(), city.name.asc())
                 .fetch();
     }

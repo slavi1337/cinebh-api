@@ -1,10 +1,10 @@
 package com.cinebh.api.repositories.custom;
 
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.common.PageResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingFiltersResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingMovieResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingSearchRequest;
-import com.cinebh.api.dto.currentlyshowing.FilterOptionResponse;
 import com.cinebh.api.dto.currentlyshowing.ProjectionTimeResponse;
 import com.cinebh.api.entities.QCity;
 import com.cinebh.api.entities.QGenre;
@@ -103,9 +103,9 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
 
     @Override
     public CurrentlyShowingFiltersResponse findFilters() {
-        final List<FilterOptionResponse> cities = queryFactory
+        final List<FilterResponse> cities = queryFactory
                 .select(Projections.constructor(
-                        FilterOptionResponse.class,
+                        FilterResponse.class,
                         city.id,
                         city.name
                 ))
@@ -113,20 +113,11 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                 .orderBy(city.name.asc())
                 .fetch();
 
-        final List<FilterOptionResponse> venues = queryFactory
-                .select(Projections.constructor(
-                        FilterOptionResponse.class,
-                        venue.id,
-                        venueLabelExpression()
-                ))
-                .from(venue)
-                .join(venue.city, city)
-                .orderBy(venue.name.asc(), city.name.asc())
-                .fetch();
+        final List<FilterResponse> venues = findVenueFilterOptions(null);
 
-        final List<FilterOptionResponse> genres = queryFactory
+        final List<FilterResponse> genres = queryFactory
                 .select(Projections.constructor(
-                        FilterOptionResponse.class,
+                        FilterResponse.class,
                         genre.id,
                         genre.name
                 ))
@@ -138,31 +129,26 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
     }
     
     @Override
-    public List<FilterOptionResponse> findVenuesByCityIds(final List<UUID> cityIds) {
-        if (cityIds == null || cityIds.isEmpty()) {
-            return queryFactory
-                    .select(Projections.constructor(
-                            FilterOptionResponse.class,
-                            venue.id,
-                            venueLabelExpression()
-                    ))
-                    .from(venue)
-                    .join(venue.city, city)
-                    .orderBy(venue.name.asc(), city.name.asc())
-                    .fetch();
-        }
+    public List<FilterResponse> findVenuesByCityIds(final List<UUID> cityIds) {
+        return findVenueFilterOptions(cityIds);
+    }
 
-        return queryFactory
+    private List<FilterResponse> findVenueFilterOptions(final List<UUID> cityIds) {
+        final JPAQuery<FilterResponse> query = queryFactory
                 .select(Projections.constructor(
-                        FilterOptionResponse.class,
+                        FilterResponse.class,
                         venue.id,
-                        venueLabelExpression()
+                        venueLabelExpression(),
+                        city.id
                 ))
                 .from(venue)
-                .join(venue.city, city)
-                .where(city.id.in(cityIds))
-                .orderBy(venue.name.asc(), city.name.asc())
-                .fetch();
+                .join(venue.city, city);
+
+        if (cityIds != null && !cityIds.isEmpty()) {
+            query.where(city.id.in(cityIds));
+        }
+
+        return query.orderBy(venue.name.asc(), city.name.asc()).fetch();
     }
 
     private List<CurrentlyShowingMovieResponse> mapCurrentlyShowingMovies(
