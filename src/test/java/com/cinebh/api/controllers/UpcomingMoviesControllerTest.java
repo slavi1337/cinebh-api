@@ -1,7 +1,7 @@
 package com.cinebh.api.controllers;
 
 import com.cinebh.api.dto.common.PageResponse;
-import com.cinebh.api.dto.upcomingmovies.UpcomingFilterOptionResponse;
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMovieResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMoviesFiltersResponse;
 import com.cinebh.api.exceptions.ApiException;
@@ -60,9 +60,9 @@ class UpcomingMoviesControllerTest {
     @Test
     void shouldReturnFiltersWithOkStatus() throws Exception {
         final UpcomingMoviesFiltersResponse response = new UpcomingMoviesFiltersResponse(
-                List.of(new UpcomingFilterOptionResponse(UUID.randomUUID(), "Sarajevo")),
-                List.of(new UpcomingFilterOptionResponse(UUID.randomUUID(), "Cinema City")),
-                List.of(new UpcomingFilterOptionResponse(UUID.randomUUID(), "Action"))
+                List.of(new FilterResponse(UUID.randomUUID(), "Sarajevo")),
+                List.of(new FilterResponse(UUID.randomUUID(), "Cinema City")),
+                List.of(new FilterResponse(UUID.randomUUID(), "Action"))
         );
 
         when(upcomingMoviesService.getFilters()).thenReturn(response);
@@ -75,8 +75,8 @@ class UpcomingMoviesControllerTest {
 
     @Test
     void shouldReturnVenuesByCitiesWithOkStatus() throws Exception {
-        final List<UpcomingFilterOptionResponse> response = List.of(
-                new UpcomingFilterOptionResponse(UUID.randomUUID(), "Cinema City")
+        final List<FilterResponse> response = List.of(
+                new FilterResponse(UUID.randomUUID(), "Cinema City")
         );
 
         when(upcomingMoviesService.getVenuesByCities(any())).thenReturn(response);

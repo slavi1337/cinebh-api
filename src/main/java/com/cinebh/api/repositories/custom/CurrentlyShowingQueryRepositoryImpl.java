@@ -1,10 +1,10 @@
 package com.cinebh.api.repositories.custom;
 
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.common.PageResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingFiltersResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingMovieResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingSearchRequest;
-import com.cinebh.api.dto.currentlyshowing.FilterOptionResponse;
 import com.cinebh.api.dto.currentlyshowing.ProjectionTimeResponse;
 import com.cinebh.api.entities.QCity;
 import com.cinebh.api.entities.QGenre;
@@ -103,9 +103,9 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
 
     @Override
     public CurrentlyShowingFiltersResponse findFilters() {
-        final List<FilterOptionResponse> cities = queryFactory
+        final List<FilterResponse> cities = queryFactory
                 .select(Projections.constructor(
-                        FilterOptionResponse.class,
+                        FilterResponse.class,
                         city.id,
                         city.name
                 ))
@@ -113,11 +113,11 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                 .orderBy(city.name.asc())
                 .fetch();
 
-        final List<FilterOptionResponse> venues = findVenueFilterOptions(null);
+        final List<FilterResponse> venues = findVenueFilterOptions(null);
 
-        final List<FilterOptionResponse> genres = queryFactory
+        final List<FilterResponse> genres = queryFactory
                 .select(Projections.constructor(
-                        FilterOptionResponse.class,
+                        FilterResponse.class,
                         genre.id,
                         genre.name
                 ))
@@ -129,14 +129,14 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
     }
     
     @Override
-    public List<FilterOptionResponse> findVenuesByCityIds(final List<UUID> cityIds) {
+    public List<FilterResponse> findVenuesByCityIds(final List<UUID> cityIds) {
         return findVenueFilterOptions(cityIds);
     }
 
-    private List<FilterOptionResponse> findVenueFilterOptions(final List<UUID> cityIds) {
-        final JPAQuery<FilterOptionResponse> query = queryFactory
+    private List<FilterResponse> findVenueFilterOptions(final List<UUID> cityIds) {
+        final JPAQuery<FilterResponse> query = queryFactory
                 .select(Projections.constructor(
-                        FilterOptionResponse.class,
+                        FilterResponse.class,
                         venue.id,
                         venueLabelExpression(),
                         city.id

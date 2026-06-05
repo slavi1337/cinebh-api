@@ -1,9 +1,9 @@
 package com.cinebh.api.controllers;
 
 import com.cinebh.api.dto.common.PageResponse;
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingFiltersResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingMovieResponse;
-import com.cinebh.api.dto.currentlyshowing.FilterOptionResponse;
 import com.cinebh.api.exceptions.ApiException;
 import com.cinebh.api.services.CurrentlyShowingService;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,9 +88,9 @@ class CurrentlyShowingControllerTest {
     @Test
     void shouldReturnFiltersWithOkStatus() throws Exception {
         final CurrentlyShowingFiltersResponse response = new CurrentlyShowingFiltersResponse(
-                List.of(new FilterOptionResponse(UUID.randomUUID(), "Sarajevo")),
-                List.of(new FilterOptionResponse(UUID.randomUUID(), "Cinema City")),
-                List.of(new FilterOptionResponse(UUID.randomUUID(), "Action"))
+                List.of(new FilterResponse(UUID.randomUUID(), "Sarajevo")),
+                List.of(new FilterResponse(UUID.randomUUID(), "Cinema City")),
+                List.of(new FilterResponse(UUID.randomUUID(), "Action"))
         );
 
         when(currentlyShowingService.getFilters()).thenReturn(response);
@@ -103,8 +103,8 @@ class CurrentlyShowingControllerTest {
 
     @Test
     void shouldReturnVenuesByCitiesWithOkStatus() throws Exception {
-        final List<FilterOptionResponse> response = List.of(
-                new FilterOptionResponse(UUID.randomUUID(), "Cinema City")
+        final List<FilterResponse> response = List.of(
+                new FilterResponse(UUID.randomUUID(), "Cinema City")
         );
 
         when(currentlyShowingService.getVenuesByCities(any())).thenReturn(response);

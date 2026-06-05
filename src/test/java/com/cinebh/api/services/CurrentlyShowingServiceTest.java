@@ -1,10 +1,10 @@
 package com.cinebh.api.services;
 
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.common.PageResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingFiltersResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingMovieResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingSearchRequest;
-import com.cinebh.api.dto.currentlyshowing.FilterOptionResponse;
 import com.cinebh.api.repositories.CurrentlyShowingRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -71,9 +71,9 @@ class CurrentlyShowingServiceTest {
     @Test
     void shouldReturnFiltersFromRepository() {
         final CurrentlyShowingFiltersResponse expectedResponse = new CurrentlyShowingFiltersResponse(
-                List.of(new FilterOptionResponse(UUID.randomUUID(), "Sarajevo")),
-                List.of(new FilterOptionResponse(UUID.randomUUID(), "Cinema City")),
-                List.of(new FilterOptionResponse(UUID.randomUUID(), "Action"))
+                List.of(new FilterResponse(UUID.randomUUID(), "Sarajevo")),
+                List.of(new FilterResponse(UUID.randomUUID(), "Cinema City")),
+                List.of(new FilterResponse(UUID.randomUUID(), "Action"))
         );
 
         when(currentlyShowingRepository.findFilters()).thenReturn(expectedResponse);
@@ -88,13 +88,13 @@ class CurrentlyShowingServiceTest {
     void shouldReturnVenuesByCitiesFromRepository() {
         final List<UUID> cityIds = List.of(UUID.randomUUID());
 
-        final List<FilterOptionResponse> expectedResponse = List.of(
-                new FilterOptionResponse(UUID.randomUUID(), "Cinema City")
+        final List<FilterResponse> expectedResponse = List.of(
+                new FilterResponse(UUID.randomUUID(), "Cinema City")
         );
 
         when(currentlyShowingRepository.findVenuesByCityIds(cityIds)).thenReturn(expectedResponse);
 
-        final List<FilterOptionResponse> actualResponse = currentlyShowingService.getVenuesByCities(cityIds);
+        final List<FilterResponse> actualResponse = currentlyShowingService.getVenuesByCities(cityIds);
 
         assertThat(actualResponse).isEqualTo(expectedResponse);
         verify(currentlyShowingRepository).findVenuesByCityIds(cityIds);

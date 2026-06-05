@@ -1,7 +1,7 @@
 package com.cinebh.api.repositories.custom;
 
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.common.PageResponse;
-import com.cinebh.api.dto.upcomingmovies.UpcomingFilterOptionResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMovieResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMoviesFiltersResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMoviesSearchRequest;
@@ -19,5 +19,5 @@ public interface UpcomingMoviesQueryRepository {
 
     UpcomingMoviesFiltersResponse findFilters();
 
-    List<UpcomingFilterOptionResponse> findVenuesByCityIds(List<UUID> cityIds);
+    List<FilterResponse> findVenuesByCityIds(List<UUID> cityIds);
 }

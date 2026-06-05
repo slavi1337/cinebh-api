@@ -1,10 +1,10 @@
 package com.cinebh.api.services;
 
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.common.PageResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingFiltersResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingMovieResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingSearchRequest;
-import com.cinebh.api.dto.currentlyshowing.FilterOptionResponse;
 import com.cinebh.api.repositories.CurrentlyShowingRepository;
 import com.cinebh.api.utils.PaginationUtils;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +37,7 @@ public class CurrentlyShowingService {
         return currentlyShowingRepository.findFilters();
     }
 
-    public List<FilterOptionResponse> getVenuesByCities(final List<UUID> cityIds) {
+    public List<FilterResponse> getVenuesByCities(final List<UUID> cityIds) {
         return currentlyShowingRepository.findVenuesByCityIds(cityIds);
     }
 }

@@ -1,7 +1,7 @@
 package com.cinebh.api.services;
 
 import com.cinebh.api.dto.common.PageResponse;
-import com.cinebh.api.dto.upcomingmovies.UpcomingFilterOptionResponse;
+import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMovieResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMoviesFiltersResponse;
 import com.cinebh.api.dto.upcomingmovies.UpcomingMoviesSearchRequest;
@@ -37,7 +37,7 @@ public class UpcomingMoviesService {
         return upcomingMoviesRepository.findFilters();
     }
 
-    public List<UpcomingFilterOptionResponse> getVenuesByCities(final List<UUID> cityIds) {
+    public List<FilterResponse> getVenuesByCities(final List<UUID> cityIds) {
         return upcomingMoviesRepository.findVenuesByCityIds(cityIds);
     }
 }
