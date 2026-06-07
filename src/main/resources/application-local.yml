@@ -1,0 +1,92 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cinebh
+    username: cinebh_app
+    password: cinebh123
+  jpa:
+    show-sql: true
+  mail:
+    host: mail.smtp2go.com
+    port: 2525
+    username: "atlantbhpraksa"
+    password: ${smtp2go.password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - email
+              - profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+
+server:
+  port: 8443
+  ssl:
+    enabled: true
+    key-store: classpath:cinebh-keystore.p12
+    key-store-password: ${keystore.password}
+    key-store-type: PKCS12
+    key-alias: cinebh
+
+app:
+  frontend:
+    base-url: https://cinebh.com:5173
+  storage:
+    bucket: cinebh
+    region: eu-central-1
+    endpoint: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    public-base-url: http://localhost:9000/cinebh
+    path-style-access-enabled: true
+  notification:
+    from-address: "slavisa.covakusic@student.etf.unibl.org"
+    from-name: "Cinebh"
+  verification:
+    code-ttl-minutes: 15
+    code-length: 6
+  validation:
+    cache:
+      mx-record-ttl-days: 7
+      mx-record-prefix: "mx_record:"
+      address-validation-ttl-days: 1
+      address-validation-prefix: "address_validation:"
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      access-token-expiration-ms: 900000
+      refresh-token-expiration-ms: 86400000
+      remember-me-refresh-token-expiration-ms: 2592000000
+    cookie:
+      domain: "cinebh.com"
+      secure: true
+      http-only: true
+      same-site: "None"
+    cors:
+      allowed-origins:
+        - "https://cinebh.com:5173"
+      allowed-methods: [ "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS" ]
+      allowed-headers: [ "Authorization", "Content-Type", "X-Requested-With", "Accept" ]
+      exposed-headers: [ "Set-Cookie" ]
+
+  nominatim:
+    enabled: true
+    base-url: https://nominatim.openstreetmap.org
+    user-agent:
+      "CineBHStudentProjectInternship/1.0 (student-project; contact: slavisa.covakusic@student.etf.unibl.org)"
+    country-codes: ba
+    country-name: Bosnia and Herzegovina

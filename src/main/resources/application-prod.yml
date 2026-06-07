@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    show-sql: false
+
+app:
+  storage:
+    bucket: cinebh
+    region: eu-central-1
+    endpoint:
+    access-key: ${APP_STORAGE_ACCESS_KEY}
+    secret-key: ${APP_STORAGE_SECRET_KEY}
+    public-base-url: ${APP_STORAGE_PUBLIC_BASE_URL}
+    path-style-access-enabled: false
