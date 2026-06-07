@@ -1,8 +1,11 @@
-# CineBH - Backend API
+# Cinebh - Backend API
 
-CineBH is a modern, web-based ticketing application built for a cinema theater chain with multiple subsidiaries. This
+Cinebh is a modern, web-based ticketing application built for a cinema theater chain with multiple subsidiaries. This
 repository contains the Spring Boot REST API, providing backend support for homepage content, currently showing
 listings, movie schedules, bookings, and future payment integration.
+
+For deployment, Jenkins, Docker Compose, EC2, TLS, OAuth and database import notes, see
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 
@@ -49,6 +52,18 @@ The backend currently provides public endpoints for:
     - Currently showing movies
     - Upcoming movies
     - Venues listing
+- Movie Details:
+    - detailed movie metadata, synopsis, ratings and media
+    - cast, directors and writers
+    - available movie-specific cities, cinemas and projection dates
+    - projection times filtered by date, city and cinema
+    - see also recommendations
+- Authentication:
+    - email/password signup and login
+    - email verification
+    - Google OAuth login
+    - JWT authentication through HttpOnly cookies
+    - refresh and logout endpoints
 - Currently Showing listing with:
     - search by title
     - filters by city, cinema, genre and projection time
@@ -56,12 +71,14 @@ The backend currently provides public endpoints for:
     - load more pagination
     - filter metadata endpoints
     - venue filtering based on selected city
+    - venue filter options include `cityId` for frontend city/cinema synchronization
 - Upcoming Movies listing with:
     - search by title
     - filters by city, cinema, genre and date range
     - load more pagination
     - filter metadata endpoints
     - venue filtering based on selected city
+    - venue filter options include `cityId` for frontend city/cinema synchronization
 
 ---
 
@@ -69,13 +86,13 @@ The backend currently provides public endpoints for:
 
 The application uses **Spring Profiles** to manage environment-specific settings:
 
-- **`local` (Default):** Targetted for local development. Connects to a local PostgreSQL instance.
+- **`local` (Default):** Targeted for local development. Connects to a local PostgreSQL instance.
 - **`prod`:** Optimized for deployment. Uses environment variables for sensitive credentials.
 
 You can activate a profile by changing the active profile in `application.yml` under the section spring_profiles_active.
 See the example below:
 
-`active: local` - for local development
+`active: local` - for local development with HTTPS on port `8443`
 
 `active: prod` - for production
 
@@ -127,6 +144,11 @@ Typical local values include:
 
 - PostgreSQL connection URL
 - PostgreSQL username and password
+- Redis host and port
+- Google OAuth client ID and secret
+- JWT secret
+- keystore password
+- SMTP password for verification emails
 - Storage endpoint, region, bucket, access and secret key
 
 ### Example Local Configuration
@@ -136,6 +158,95 @@ Adjust the values to match your local machine.
 Check `application-local.yml` for local config and edit configuration in `application.yml`.
 
 **Note:** keep actual secrets out of version control.
+
+Required local environment variables:
+
+```text
+JWT_SECRET=<long-random-secret>
+GOOGLE_CLIENT_ID=<google-client-id>
+GOOGLE_CLIENT_SECRET=<google-client-secret>
+KEYSTORE_PASSWORD=<local-keystore-password>
+SMTP2GO_PASSWORD=<smtp-password>
+```
+
+Depending on your shell/IDE, Spring placeholders can also be provided as `keystore.password` and `smtp2go.password`.
+
+## Local HTTPS Setup
+
+Local development uses HTTPS and custom local hostnames so auth cookies and Google OAuth can be tested realistically.
+
+Add these entries to your hosts file:
+
+```text
+127.0.0.1 cinebh.com
+127.0.0.1 api.cinebh.com
+```
+
+The backend runs on:
+
+```text
+https://api.cinebh.com:8443
+```
+
+The frontend runs on:
+
+```text
+https://cinebh.com:5173
+```
+
+The local profile expects a PKCS12 keystore at:
+
+```text
+src/main/resources/cinebh-keystore.p12
+```
+
+Example keystore generation command:
+
+```bash
+keytool -genkeypair \
+  -alias cinebh \
+  -keyalg RSA \
+  -keysize 2048 \
+  -storetype PKCS12 \
+  -keystore src/main/resources/cinebh-keystore.p12 \
+  -validity 3650 \
+  -storepass <keystore-password> \
+  -dname "CN=api.cinebh.com, OU=Development, O=Cinebh, L=Banja Luka, ST=RS, C=BA" \
+  -ext "SAN=dns:api.cinebh.com,dns:cinebh.com,ip:127.0.0.1"
+```
+
+Set `KEYSTORE_PASSWORD` to the same password.
+
+## Google OAuth Setup
+
+Spring Security uses standard OAuth routes:
+
+```text
+/oauth2/authorization/google
+/login/oauth2/code/google
+```
+
+The OAuth callback is intentionally not under `/api/v1`.
+
+For local Google Console configuration:
+
+Authorized JavaScript origin:
+
+```text
+https://cinebh.com:5173
+```
+
+Authorized redirect URI:
+
+```text
+https://api.cinebh.com:8443/login/oauth2/code/google
+```
+
+For deployment, the redirect URI must match the public domain that Google sees, for example:
+
+```text
+https://cinebhapp.praksa.abhapp.com/login/oauth2/code/google
+```
 
 ## Database Setup
 
@@ -195,7 +306,7 @@ java -jar target/api-0.0.1-SNAPSHOT.jar
 Once the application is running locally, API documentation is available at:
 
 ```text
-http://localhost:8080/swagger-ui/index.html
+https://api.cinebh.com:8443/swagger-ui.html
 ```
 
 ## Storage Setup (MinIO / S3)
@@ -214,6 +325,49 @@ If the project uses image/file uploads, object storage must be configured.
     - `storage.secret-key`
     - `storage.path-style-access-enabled`
 
+## Docker Compose Local Stack
+
+The repository includes a `docker-compose.yml` that can run the backend together with:
+
+- PostgreSQL 17
+- Redis 7
+- MinIO
+- frontend from `../cinebh-web`
+
+Expected local folder layout:
+
+```text
+parent-folder/
+  cinebh-api/
+  cinebh-web/
+```
+
+Run from the backend repository:
+
+```bash
+docker compose up --build
+```
+
+The backend waits for PostgreSQL and Redis healthchecks before starting.
+
+## Demo Data Import
+
+Sanitized public demo/catalog data is stored under:
+
+```text
+db-backup/
+```
+
+The dump intentionally excludes users, password hashes, OAuth identifiers, verification codes, bookings and payments.
+
+Flyway should create the schema first. Import demo data afterwards:
+
+```bash
+sh ./db-backup/init.sh "postgresql://USER:PASSWORD@HOST:5432/cinebh"
+```
+
+See `db-backup/README.md` for details.
+
 ## Environment Differences
 
 ### Local
@@ -231,6 +385,24 @@ If the project uses image/file uploads, object storage must be configured.
 - logging, monitoring, and deployment configuration should be handled by DevOps
 
 ## Useful API Areas for QA / DevOps
+
+### Movie Details
+
+Supports:
+
+- movie details by movie ID
+- movie media, cast, directors, writers and ratings
+- movie-specific city and cinema filter metadata
+- projection dates
+- projection times filtered by selected date, city and venue
+- see also recommendations
+
+Main endpoints:
+
+```text
+GET /api/v1/movies/{movieId}/details
+GET /api/v1/movies/{movieId}/projections
+```
 
 ### Currently Showing
 
@@ -260,6 +432,7 @@ DevOps/QA should ensure the target environment has enough seeded data to test:
 - multiple cities
 - multiple venues
 - multiple genres
+- movies with cast, directors, writers and media assets
 - future projections
 - currently showing schedules
 
@@ -269,19 +442,28 @@ To properly test listing pages and filters:
 
 - seed enough currently showing movies and projections
 - seed enough upcoming movies and future projections
+- seed movies with details data, media, credits and see also candidates
 - make sure multiple cinemas exist across different cities
 - verify that filter metadata endpoints return meaningful values
 
 ## Deployment Notes for DevOps
 
+Detailed deployment notes are maintained in [DEPLOYMENT.md](DEPLOYMENT.md).
+
 For deployment environments, ensure the following are configured:
 
 - active Spring profile
 - datasource URL, username, password
+- Redis connection
 - JWT secret
+- Google OAuth client ID and secret
 - Stripe keys
 - storage endpoint / region / bucket / credentials
-- any reverse proxy / CORS rules if required
+- frontend base URL
+- cookie domain, secure flag and SameSite policy
+- CORS allowed origins
+- reverse proxy routes for `/api/**`, `/oauth2/**`, `/login/**`, `/swagger-ui/**`, and `/v3/api-docs/**`
+- forwarded `Host` and `X-Forwarded-Proto` headers for OAuth redirects
 - database is reachable before app startup
 - migration strategy is defined and safe for the target environment
 
@@ -299,8 +481,9 @@ Whenever new infrastructure-relevant functionality is added, update documentatio
 
 1. Install JDK 21 and PostgreSQL 17
 2. Create the `cinebh` database
-3. Configure local application properties / environment variables
-4. Start MinIO if file uploads are needed
-5. Run the backend with `./mvnw spring-boot:run`
-6. Let Flyway run migrations automatically
-7. Open Swagger and test endpoints
+3. Add local host mappings for `cinebh.com` and `api.cinebh.com`
+4. Configure local environment variables
+5. Start Redis and MinIO if needed
+6. Run the backend with `./mvnw spring-boot:run`
+7. Let Flyway run migrations automatically
+8. Open Swagger and test endpoints
