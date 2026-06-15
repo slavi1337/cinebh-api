@@ -90,3 +90,7 @@ app:
       "CineBHStudentProjectInternship/1.0 (student-project; contact: slavisa.covakusic@student.etf.unibl.org)"
     country-codes: ba
     country-name: Bosnia and Herzegovina
+
+cinebh:
+  booking:
+    hold-cleanup-delay-ms: 30000
