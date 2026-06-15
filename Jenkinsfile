@@ -35,9 +35,15 @@ pipeline {
                     string(credentialsId: 'cinebh-google-client-id', variable: 'GOOGLE_CLIENT_ID'),
                     string(credentialsId: 'cinebh-google-client-secret', variable: 'GOOGLE_CLIENT_SECRET'),
                     string(credentialsId: 'cinebh-jwt-secret', variable: 'JWT_SECRET'),
-                    string(credentialsId: 'cinebh-keystore-password', variable: 'KEYSTORE_PASSWORD')
+                    string(credentialsId: 'cinebh-keystore-password', variable: 'KEYSTORE_PASSWORD'),
+                    string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')
                 ]) {
                     sh '''
+                        # Copy nginx.conf from frontend repo
+                        git clone --depth 1 -b main https://x-access-token:${GITHUB_TOKEN}@github.com/slavi1337/cinebh-web.git /tmp/cinebh-web
+                        scp /tmp/cinebh-web/nginx.conf ec2-user@${EC2_HOST}:/home/ec2-user/nginx.conf
+                        rm -rf /tmp/cinebh-web
+
                         scp docker-compose.yml ec2-user@${EC2_HOST}:/home/ec2-user/docker-compose.yml
                         ssh -i /var/lib/jenkins/.ssh/id_ed25519 -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} "
                             cd /home/ec2-user
