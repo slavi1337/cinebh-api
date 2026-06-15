@@ -1,121 +1,67 @@
 pipeline {
-    agent {
-        docker {
-            image 'mcr.microsoft.com/playwright:v1.59.1-noble'
-            args '--ipc=host --shm-size=2g'
-        }
-    }
-
-    triggers {
-        cron('15 9 * * *')
-    }
+    agent any
 
     environment {
-        HOME = '/tmp'
-        CI = 'true'
-
-        FRONTEND_BASE_URL = 'https://cinebhapp.praksa.abhapp.com'
-        API_BASE_URL = 'https://cinebhapp.praksa.abhapp.com/api/v1'
-
-        LOGIN_EMAIL = credentials('cinebh-login-email')
-        LOGIN_PASSWORD = credentials('cinebh-login-password')
+        EC2_HOST = '18.159.94.138'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Build Backend') {
             steps {
-                git branch: 'feature/homepage-refactor-and-tags-for-tests',
-                    credentialsId: 'Amer-ABH',
-                    url: 'https://github.com/Civa24/CineBH-atlantbh-ui-api-automation.git'
+                withCredentials([
+                    file(credentialsId: 'cinebh-keystore', variable: 'KEYSTORE_FILE')
+                ]) {
+                    sh '''
+                        cp $KEYSTORE_FILE src/main/resources/cinebh-keystore.p12
+                        docker build -t cinebh-backend:latest .
+                    '''
+                }
             }
         }
 
-        stage('Install Dependencies') {
-            steps {
-                sh 'npm ci'
-            }
-        }
-
-        stage('Check API URL') {
+        stage('Push to Registry') {
             steps {
                 sh '''
-                    echo "API_BASE_URL is: $API_BASE_URL"
-                    curl -k -I "$API_BASE_URL/movies/hero" || true
+                    docker tag cinebh-backend:latest ${EC2_HOST}:5000/cinebh-backend:latest
+                    docker push ${EC2_HOST}:5000/cinebh-backend:latest
                 '''
             }
         }
 
-        stage('Run API Tests Including Known Bugs') {
+        stage('Deploy') {
             steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    sh 'npm run test:api'
+                withCredentials([
+                    string(credentialsId: 'cinebh-smtp2go-password', variable: 'SMTP2GO_PASSWORD'),
+                    string(credentialsId: 'cinebh-google-client-id', variable: 'GOOGLE_CLIENT_ID'),
+                    string(credentialsId: 'cinebh-google-client-secret', variable: 'GOOGLE_CLIENT_SECRET'),
+                    string(credentialsId: 'cinebh-jwt-secret', variable: 'JWT_SECRET'),
+                    string(credentialsId: 'cinebh-keystore-password', variable: 'KEYSTORE_PASSWORD')
+                ]) {
+                    sh '''
+                        scp docker-compose.yml ec2-user@${EC2_HOST}:/home/ec2-user/docker-compose.yml
+                        ssh -i /var/lib/jenkins/.ssh/id_ed25519 -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} "
+                            cd /home/ec2-user
+                            export SMTP2GO_PASSWORD='${SMTP2GO_PASSWORD}'
+                            export GOOGLE_CLIENT_ID='${GOOGLE_CLIENT_ID}'
+                            export GOOGLE_CLIENT_SECRET='${GOOGLE_CLIENT_SECRET}'
+                            export JWT_SECRET='${JWT_SECRET}'
+                            export KEYSTORE_PASSWORD='${KEYSTORE_PASSWORD}'
+                            export COOKIE_DOMAIN=cinebhapp.praksa.abhapp.com
+                            export COOKIE_SECURE=true
+                            export COOKIE_SAME_SITE=None
+                            export CORS_ORIGINS=https://cinebhapp.praksa.abhapp.com
+                            export FRONTEND_URL=https://cinebhapp.praksa.abhapp.com
+                            export STORAGE_PUBLIC_BASE_URL=https://18.159.94.138:9000/cinebh
+                            export BACKEND_IMAGE=${EC2_HOST}:5000/cinebh-backend:latest
+                            export FRONTEND_IMAGE=${EC2_HOST}:5000/cinebh-frontend:latest
+                            docker-compose down
+                            docker-compose up -d
+                            sleep 30
+                            docker-compose ps
+                        "
+                    '''
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            archiveArtifacts artifacts: 'test-results/**, playwright-report/**, allure-results/**', allowEmptyArchive: true
-        }
-
-        success {
-            emailext(
-                to: 'amercivic6c@gmail.com',
-                subject: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: """
-                API tests finished successfully.
-
-                Job: ${env.JOB_NAME}
-                Build number: ${env.BUILD_NUMBER}
-                Status: SUCCESS
-
-                Build URL:
-                ${env.BUILD_URL}
-                """
-            )
-        }
-
-        unstable {
-            emailext(
-                to: 'amercivic6c@gmail.com',
-                subject: "UNSTABLE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: """
-                API tests finished with unstable status.
-
-                This can happen because known bug scenarios are included in this job.
-
-                Job: ${env.JOB_NAME}
-                Build number: ${env.BUILD_NUMBER}
-                Status: UNSTABLE
-
-                Check the console output and archived reports.
-
-                Build URL:
-                ${env.BUILD_URL}
-                """,
-                attachLog: true
-            )
-        }
-
-        failure {
-            emailext(
-                to: 'amercivic6c@gmail.com',
-                subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: """
-                API tests pipeline failed.
-
-                Job: ${env.JOB_NAME}
-                Build number: ${env.BUILD_NUMBER}
-                Status: FAILED
-
-                Please check the console output.
-
-                Build URL:
-                ${env.BUILD_URL}
-                """,
-                attachLog: true
-            )
         }
     }
 }
