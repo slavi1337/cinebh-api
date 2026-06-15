@@ -59,6 +59,7 @@ pipeline {
                             docker-compose up -d
                             sleep 30
                             docker-compose ps
+                            sudo systemctl restart nginx
                         "
                     '''
                 }
