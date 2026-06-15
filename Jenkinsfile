@@ -12,6 +12,7 @@ pipeline {
                     file(credentialsId: 'cinebh-keystore', variable: 'KEYSTORE_FILE')
                 ]) {
                     sh '''
+                        chmod -R 777 src/main/resources 2>/dev/null || true
                         mkdir -p src/main/resources
                         cp $KEYSTORE_FILE src/main/resources/cinebh-keystore.p12
                         docker build --no-cache -t cinebh-backend:latest .
