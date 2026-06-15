@@ -39,13 +39,18 @@ pipeline {
                     string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')
                 ]) {
                     sh '''
-                        # Copy nginx.conf from frontend repo
+                        docker save cinebh-backend:latest | gzip > cinebh-backend.tar.gz
+                        scp -i /var/lib/jenkins/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+                            cinebh-backend.tar.gz ec2-user@${EC2_HOST}:/home/ec2-user/
+
                         git clone --depth 1 -b main https://x-access-token:${GITHUB_TOKEN}@github.com/slavi1337/cinebh-web.git /tmp/cinebh-web
-                        scp /tmp/cinebh-web/nginx.conf ec2-user@${EC2_HOST}:/home/ec2-user/nginx.conf
+                        scp -i /var/lib/jenkins/.ssh/id_ed25519 /tmp/cinebh-web/nginx.conf ec2-user@${EC2_HOST}:/home/ec2-user/nginx.conf
                         rm -rf /tmp/cinebh-web
 
-                        scp docker-compose.yml ec2-user@${EC2_HOST}:/home/ec2-user/docker-compose.yml
+                        scp -i /var/lib/jenkins/.ssh/id_ed25519 docker-compose.yml ec2-user@${EC2_HOST}:/home/ec2-user/docker-compose.yml
+
                         ssh -i /var/lib/jenkins/.ssh/id_ed25519 -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} "
+                            docker load < /home/ec2-user/cinebh-backend.tar.gz
                             cd /home/ec2-user
                             export SMTP2GO_PASSWORD='${SMTP2GO_PASSWORD}'
                             export GOOGLE_CLIENT_ID='${GOOGLE_CLIENT_ID}'
@@ -58,8 +63,6 @@ pipeline {
                             export CORS_ORIGINS=https://cinebhapp.praksa.abhapp.com
                             export FRONTEND_URL=https://cinebhapp.praksa.abhapp.com
                             export STORAGE_PUBLIC_BASE_URL=https://18.159.94.138:9000/cinebh
-                            export BACKEND_IMAGE=${EC2_HOST}:5000/cinebh-backend:latest
-                            export FRONTEND_IMAGE=${EC2_HOST}:5000/cinebh-frontend:latest
                             docker-compose down
                             docker-compose up -d
                             sleep 30
