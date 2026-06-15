@@ -8,23 +8,15 @@ pipeline {
     stages {
         stage('Build Backend') {
             steps {
+                cleanWs()
                 withCredentials([
                     file(credentialsId: 'cinebh-keystore', variable: 'KEYSTORE_FILE')
                 ]) {
                     sh '''
                         cp $KEYSTORE_FILE src/main/resources/cinebh-keystore.p12
-                        docker build -t cinebh-backend:latest .
+                        docker build --no-cache -t cinebh-backend:latest .
                     '''
                 }
-            }
-        }
-
-        stage('Push to Registry') {
-            steps {
-                sh '''
-                    docker tag cinebh-backend:latest ${EC2_HOST}:5000/cinebh-backend:latest
-                    docker push ${EC2_HOST}:5000/cinebh-backend:latest
-                '''
             }
         }
 
