@@ -22,7 +22,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
-@EnableConfigurationProperties({SecurityProperties.class, FrontendProperties.class})
+@EnableConfigurationProperties({SecurityProperties.class, FrontendProperties.class, PaymentProperties.class})
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -50,10 +50,12 @@ public class SecurityConfig {
                                 "/api/v1/movies/**",
                                 "/api/v1/venues/**",
                                 "/api/v1/currently-showing/**",
-                                "/api/v1/upcoming-movies/**"
+                                "/api/v1/upcoming-movies/**",
+                                "/api/v1/tickets/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/**",
+                                "/api/v1/payments/stripe/webhook",
                                 "/api/v1/ws/**",
                                 "/oauth2/**",
                                 "/login/**"

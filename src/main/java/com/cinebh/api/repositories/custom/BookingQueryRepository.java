@@ -18,5 +18,9 @@ public interface BookingQueryRepository {
 
     Optional<Booking> findByIdWithSeats(UUID id);
 
+    Optional<Booking> findByIdWithPaymentDetailsForUpdate(UUID id);
+
+    Optional<Booking> findByTicketCodeWithPaymentDetails(UUID ticketCode);
+
     List<Booking> findExpiredByStatusForUpdate(BookingStatus status, OffsetDateTime now);
 }

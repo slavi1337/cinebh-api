@@ -21,6 +21,8 @@ import com.cinebh.api.repositories.ProjectionRepository;
 import com.cinebh.api.repositories.SeatPriceRepository;
 import com.cinebh.api.repositories.SeatTemplateRepository;
 import com.cinebh.api.services.BookingService;
+import com.cinebh.api.utils.BookingSessionDurations;
+import com.cinebh.api.utils.BookingSeatUtils;
 import com.cinebh.api.utils.SecurityUtils;
 import com.cinebh.api.websocket.ProjectionSeatEventPublisher;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +33,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -51,7 +50,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
-    private static final Duration HOLD_DURATION = Duration.ofMinutes(5);
     private static final Set<BookingStatus> BLOCKING_STATUSES = EnumSet.of(
             BookingStatus.HOLD,
             BookingStatus.RESERVED,
@@ -189,7 +187,12 @@ public class BookingServiceImpl implements BookingService {
 
     private Booking createHold(final User currentUser, final Projection projection) {
         final OffsetDateTime now = OffsetDateTime.now(clock);
-        return new Booking(currentUser, projection, now.plus(HOLD_DURATION), now);
+        return new Booking(
+                currentUser,
+                projection,
+                now.plus(BookingSessionDurations.SEAT_SELECTION),
+                now
+        );
     }
 
     private List<UUID> normalizeSeatTemplateIds(final List<UUID> seatTemplateIds) {
@@ -210,7 +213,7 @@ public class BookingServiceImpl implements BookingService {
             throw new ApiException("One or more selected seats do not exist.", HttpStatus.BAD_REQUEST);
         }
 
-        return sortSeatTemplates(seatTemplates);
+        return BookingSeatUtils.sortSeatTemplates(seatTemplates);
     }
 
     private void ensureSeatsAvailable(
@@ -255,23 +258,7 @@ public class BookingServiceImpl implements BookingService {
             throw new ApiException("Seat layout is not configured.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        return sortSeatTemplates(seatTemplates);
-    }
-
-    private List<SeatTemplate> sortSeatTemplates(final Collection<SeatTemplate> seatTemplates) {
-        return seatTemplates.stream()
-                .sorted(Comparator
-                        .comparing(SeatTemplate::getRowNum)
-                        .thenComparingInt(seatTemplate -> parseSeatNumber(seatTemplate.getSeatNum())))
-                .toList();
-    }
-
-    private int parseSeatNumber(final String seatNumber) {
-        try {
-            return Integer.parseInt(seatNumber);
-        } catch (NumberFormatException exception) {
-            return Integer.MAX_VALUE;
-        }
+        return BookingSeatUtils.sortSeatTemplates(seatTemplates);
     }
 
     private SeatResponse toSeatResponse(
@@ -318,9 +305,10 @@ public class BookingServiceImpl implements BookingService {
                         .stream()
                         .filter(BookingSeat::isActive)
                         .map(this::toSelectedSeatResponse)
-                        .sorted(Comparator
-                                .comparing(SelectedSeatResponse::row)
-                                .thenComparingInt(seat -> parseSeatNumber(seat.number())))
+                        .sorted(BookingSeatUtils.seatPositionComparator(
+                                SelectedSeatResponse::row,
+                                SelectedSeatResponse::number
+                        ))
                         .toList()
         );
     }

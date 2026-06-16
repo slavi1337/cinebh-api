@@ -55,6 +55,9 @@ public class Booking {
     @Column(name = "total_price", nullable = false)
     private BigDecimal totalPrice;
 
+    @Column(name = "ticket_code", nullable = false, unique = true)
+    private UUID ticketCode;
+
     @Column(name = "expires_at", nullable = false)
     private OffsetDateTime expiresAt;
 
@@ -78,6 +81,7 @@ public class Booking {
         this.projection = projection;
         this.status = BookingStatus.HOLD;
         this.totalPrice = BigDecimal.ZERO;
+        this.ticketCode = UUID.randomUUID();
         this.expiresAt = expiresAt;
         this.reminderEnabled = false;
         this.createdAt = createdAt;
@@ -118,6 +122,14 @@ public class Booking {
         status = BookingStatus.EXPIRED;
         deactivateSeats();
         recalculateTotalPrice();
+    }
+
+    public void markPaid() {
+        status = BookingStatus.PAID;
+    }
+
+    public void extendExpiration(final OffsetDateTime expiresAt) {
+        this.expiresAt = expiresAt;
     }
 
     private void activateSeat(final SeatTemplate seatTemplate, final BigDecimal price) {

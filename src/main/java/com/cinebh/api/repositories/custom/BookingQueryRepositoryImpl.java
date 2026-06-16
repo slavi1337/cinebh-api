@@ -3,8 +3,13 @@ package com.cinebh.api.repositories.custom;
 import com.cinebh.api.entities.Booking;
 import com.cinebh.api.entities.QBooking;
 import com.cinebh.api.entities.QBookingSeat;
+import com.cinebh.api.entities.QCity;
+import com.cinebh.api.entities.QHall;
+import com.cinebh.api.entities.QMovie;
 import com.cinebh.api.entities.QProjection;
 import com.cinebh.api.entities.QSeatTemplate;
+import com.cinebh.api.entities.QUser;
+import com.cinebh.api.entities.QVenue;
 import com.cinebh.api.entities.enums.BookingStatus;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -27,6 +32,11 @@ public class BookingQueryRepositoryImpl implements BookingQueryRepository {
     private final QBookingSeat bookingSeat = QBookingSeat.bookingSeat;
     private final QSeatTemplate seatTemplate = QSeatTemplate.seatTemplate;
     private final QProjection projection = QProjection.projection;
+    private final QUser user = QUser.user;
+    private final QMovie movie = QMovie.movie;
+    private final QHall hall = QHall.hall;
+    private final QVenue venue = QVenue.venue;
+    private final QCity city = QCity.city;
 
     @Override
     public Optional<Booking> findLatestByUserProjectionAndStatusForUpdate(
@@ -55,6 +65,25 @@ public class BookingQueryRepositoryImpl implements BookingQueryRepository {
     }
 
     @Override
+    public Optional<Booking> findByIdWithPaymentDetailsForUpdate(final UUID id) {
+        return Optional.ofNullable(
+                applyPaymentDetailsGraph(selectDistinctBooking())
+                        .where(booking.id.eq(id))
+                        .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                        .fetchOne()
+        );
+    }
+
+    @Override
+    public Optional<Booking> findByTicketCodeWithPaymentDetails(final UUID ticketCode) {
+        return Optional.ofNullable(
+                applyPaymentDetailsGraph(selectDistinctBooking())
+                        .where(booking.ticketCode.eq(ticketCode))
+                        .fetchOne()
+        );
+    }
+
+    @Override
     public List<Booking> findExpiredByStatusForUpdate(final BookingStatus status, final OffsetDateTime now) {
         return applyBookingGraph(selectDistinctBooking())
                 .where(booking.status.eq(status)
@@ -75,5 +104,14 @@ public class BookingQueryRepositoryImpl implements BookingQueryRepository {
                 .leftJoin(booking.projection, projection).fetchJoin()
                 .leftJoin(booking.seats, bookingSeat).fetchJoin()
                 .leftJoin(bookingSeat.seatTemplate, seatTemplate).fetchJoin();
+    }
+
+    private JPAQuery<Booking> applyPaymentDetailsGraph(final JPAQuery<Booking> query) {
+        return applyBookingGraph(query)
+                .leftJoin(booking.user, user).fetchJoin()
+                .leftJoin(projection.movie, movie).fetchJoin()
+                .leftJoin(projection.hall, hall).fetchJoin()
+                .leftJoin(hall.venue, venue).fetchJoin()
+                .leftJoin(venue.city, city).fetchJoin();
     }
 }

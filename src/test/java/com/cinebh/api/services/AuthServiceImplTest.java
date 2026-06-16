@@ -17,6 +17,7 @@ import com.cinebh.api.utils.CookieUtils;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -227,9 +230,19 @@ class AuthServiceImplTest {
 
     @Test
     void shouldLogoutSuccessfully() {
+        final HttpServletRequest request = mock(HttpServletRequest.class);
         final HttpServletResponse response = mock(HttpServletResponse.class);
-        authService.logout(response);
-        verify(cookieUtils).clearTokenCookies(response);
+        final HttpSession session = mock(HttpSession.class);
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("test@cinebh.com", null)
+        );
+        when(request.getSession(false)).thenReturn(session);
+
+        authService.logout(request, response);
+
+        verify(cookieUtils).clearAuthenticationCookies(response);
+        verify(session).invalidate();
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
