@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Cinebh Ticket Purchase Confirmation</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;color:#1f1f1f;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f5f5;padding:32px 0;">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="600" cellspacing="0" cellpadding="0"
+                   style="background:#ffffff;border-radius:16px;overflow:hidden;">
+                <tr>
+                    <td style="background:#b5121b;color:#ffffff;padding:24px 32px;">
+                        <h1 style="margin:0;font-size:24px;">Your tickets are confirmed</h1>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:32px;">
+                        <p style="margin:0 0 16px;font-size:16px;">
+                            Hi <span th:text="${name}">User</span>,
+                        </p>
+                        <p style="margin:0 0 24px;font-size:16px;line-height:1.5;">
+                            Your payment was successful. Here is your booking summary:
+                        </p>
+
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                               style="border-collapse:collapse;font-size:15px;">
+                            <tr>
+                                <td style="padding:10px 0;color:#666666;">Booking ID</td>
+                                <td style="padding:10px 0;text-align:right;font-weight:bold;"
+                                    th:text="${bookingId}">booking-id</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 0;color:#666666;">Ticket Code</td>
+                                <td style="padding:10px 0;text-align:right;font-weight:bold;"
+                                    th:text="${ticketCode}">ticket-code</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 0;color:#666666;">Movie</td>
+                                <td style="padding:10px 0;text-align:right;font-weight:bold;"
+                                    th:text="${movieTitle}">Movie title</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 0;color:#666666;">Cinema</td>
+                                <td style="padding:10px 0;text-align:right;font-weight:bold;">
+                                    <span th:text="${venueName}">Venue</span>,
+                                    <span th:text="${cityName}">City</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 0;color:#666666;">Hall</td>
+                                <td style="padding:10px 0;text-align:right;font-weight:bold;"
+                                    th:text="${hallName}">Hall</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 0;color:#666666;">Projection</td>
+                                <td style="padding:10px 0;text-align:right;font-weight:bold;"
+                                    th:text="${projectionStartTime}">Projection time</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 0;color:#666666;">Seats</td>
+                                <td style="padding:10px 0;text-align:right;font-weight:bold;"
+                                    th:text="${#strings.listJoin(seats, ', ')}">A1, A2</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:16px 0 0;color:#666666;border-top:1px solid #eeeeee;">Total</td>
+                                <td style="padding:16px 0 0;text-align:right;font-weight:bold;border-top:1px solid #eeeeee;">
+                                    <span th:text="${totalPrice}">0.00</span>
+                                    <span th:text="${currency}">BAM</span>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div th:if="${hasBookingQrCode}" style="margin-top:28px;text-align:center;">
+                            <p style="margin:0 0 12px;font-size:14px;color:#666666;">
+                                Scan this QR code to validate the ticket against the Cinebh booking system.
+                            </p>
+                            <img th:src="'cid:' + ${bookingQrContentId}" alt="Booking QR code"
+                                 width="160" height="160" style="display:inline-block;border:1px solid #eeeeee;border-radius:12px;padding:8px;">
+                        </div>
+
+                        <p style="margin:28px 0 0;font-size:14px;line-height:1.5;color:#666666;">
+                            Please keep this email as your purchase confirmation.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
