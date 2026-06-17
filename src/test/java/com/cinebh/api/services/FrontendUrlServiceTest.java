@@ -40,6 +40,15 @@ class FrontendUrlServiceTest {
     }
 
     @Test
+    void shouldBuildReservationCheckoutCancelUrl() {
+        final String url = frontendUrlService.reservationCheckoutCancelUrl();
+
+        assertThat(url).isEqualTo(
+                "https://cinebh.test/profile/reservations?payment=cancelled"
+        );
+    }
+
+    @Test
     void shouldBuildTicketConfirmationUrl() {
         final String url = frontendUrlService.ticketConfirmationUrl(
                 UUID.fromString("00000000-0000-0000-0000-000000000111")

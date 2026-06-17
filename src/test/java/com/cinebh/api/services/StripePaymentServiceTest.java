@@ -135,6 +135,37 @@ class StripePaymentServiceTest {
     }
 
     @Test
+    void shouldCreateCheckoutSessionForActiveReservationWithoutExtendingExpiry() throws Exception {
+        final OffsetDateTime reservationExpiry = booking.getProjection().getStartTime().minusHours(1);
+        booking.markReserved(reservationExpiry);
+        final Session stripeSession = new Session();
+        stripeSession.setId("cs_test_123");
+        stripeSession.setUrl("https://checkout.stripe.com/c/pay/cs_test_123");
+
+        when(securityUtils.getCurrentUser()).thenReturn(user);
+        when(bookingRepository.findByIdWithPaymentDetailsForUpdate(booking.getId()))
+                .thenReturn(Optional.of(booking));
+
+        try (MockedStatic<Session> sessionMock = mockStatic(Session.class)) {
+            sessionMock
+                    .when(() -> Session.create(any(SessionCreateParams.class), any(RequestOptions.class)))
+                    .thenReturn(stripeSession);
+
+            final CheckoutSessionResponse response = paymentService.createCheckoutSession(
+                    new CheckoutSessionRequest(booking.getId())
+            );
+
+            final ArgumentCaptor<Payment> paymentCaptor = ArgumentCaptor.forClass(Payment.class);
+            verify(paymentRepository).save(paymentCaptor.capture());
+
+            assertThat(response.sessionUrl()).isEqualTo(stripeSession.getUrl());
+            assertThat(booking.getExpiresAt()).isEqualTo(reservationExpiry);
+            assertThat(paymentCaptor.getValue().getBooking()).isEqualTo(booking);
+            assertThat(paymentCaptor.getValue().getStatus()).isEqualTo(PaymentStatus.PENDING);
+        }
+    }
+
+    @Test
     void shouldRejectExpiredHoldBeforeCheckoutSessionIsCreated() {
         final Booking expiredBooking = createBooking(user, OffsetDateTime.now(FIXED_CLOCK).minusSeconds(1));
 
@@ -147,7 +178,7 @@ class StripePaymentServiceTest {
                 .satisfies(exception -> {
                     final ApiException apiException = (ApiException) exception;
                     assertThat(apiException.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(apiException.getMessage()).isEqualTo("Booking hold has expired.");
+                    assertThat(apiException.getMessage()).isEqualTo("Booking has expired.");
                 });
 
         assertThat(expiredBooking.getStatus()).isEqualTo(BookingStatus.EXPIRED);

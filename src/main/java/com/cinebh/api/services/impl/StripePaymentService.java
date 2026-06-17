@@ -63,7 +63,7 @@ public class StripePaymentService implements PaymentService {
     @Override
     @Transactional
     public CheckoutSessionResponse createCheckoutSession(final CheckoutSessionRequest request) {
-        bookingExpirationService.expireExpiredHolds();
+        bookingExpirationService.expireExpiredBookings();
 
         final User currentUser = securityUtils.getCurrentUser();
         final Booking booking = bookingRepository.findByIdWithPaymentDetailsForUpdate(request.bookingId())
@@ -78,7 +78,7 @@ public class StripePaymentService implements PaymentService {
                             .setApiKey(stripeSecretKey())
                             .build()
             );
-            booking.extendExpiration(OffsetDateTime.now(clock).plus(BookingSessionDurations.PAYMENT));
+            extendHoldPaymentWindow(booking);
 
             final Payment payment = new Payment(
                     booking,
@@ -148,14 +148,14 @@ public class StripePaymentService implements PaymentService {
             throw new ApiException("Booking hold not found.", HttpStatus.NOT_FOUND);
         }
 
-        if (booking.getStatus() != BookingStatus.HOLD) {
-            throw new ApiException("Only active booking holds can be paid.", HttpStatus.BAD_REQUEST);
+        if (!canBePaid(booking)) {
+            throw new ApiException("Only active booking holds or reservations can be paid.", HttpStatus.BAD_REQUEST);
         }
 
         if (booking.isExpiredAt(OffsetDateTime.now(clock))) {
             booking.expire();
             projectionSeatEventPublisher.publishSeatMapChanged(booking.getProjection().getId());
-            throw new ApiException("Booking hold has expired.", HttpStatus.BAD_REQUEST);
+            throw new ApiException("Booking has expired.", HttpStatus.BAD_REQUEST);
         }
 
         if (BookingSeatUtils.activeSeats(booking).isEmpty()) {
@@ -169,10 +169,7 @@ public class StripePaymentService implements PaymentService {
                 .setClientReferenceId(booking.getId().toString())
                 .setCustomerEmail(booking.getUser().getEmail())
                 .setSuccessUrl(frontendUrlService.checkoutSuccessUrl(booking.getTicketCode()))
-                .setCancelUrl(frontendUrlService.checkoutCancelUrl(
-                        booking.getProjection().getMovie().getId(),
-                        booking.getProjection().getId()
-                ))
+                .setCancelUrl(cancelUrl(booking))
                 .putMetadata(BOOKING_ID_METADATA_KEY, booking.getId().toString())
                 .addLineItem(SessionCreateParams.LineItem.builder()
                         .setQuantity(1L)
@@ -232,10 +229,10 @@ public class StripePaymentService implements PaymentService {
             return;
         }
 
-        if (booking.getStatus() != BookingStatus.HOLD) {
+        if (!canBePaid(booking)) {
             payment.markFailed();
             log.warn(
-                    "Booking is not in HOLD status during Stripe completion: bookingId={}, bookingStatus={}",
+                    "Booking is not payable during Stripe completion: bookingId={}, bookingStatus={}",
                     booking.getId(),
                     booking.getStatus()
             );
@@ -246,7 +243,7 @@ public class StripePaymentService implements PaymentService {
             booking.expire();
             payment.markFailed();
             projectionSeatEventPublisher.publishSeatMapChanged(booking.getProjection().getId());
-            log.warn("Booking hold expired before Stripe completion: bookingId={}", booking.getId());
+            log.warn("Booking expired before Stripe completion: bookingId={}", booking.getId());
             return;
         }
 
@@ -289,6 +286,28 @@ public class StripePaymentService implements PaymentService {
 
     private boolean isPaidCheckoutSession(final Session session) {
         return PAID_PAYMENT_STATUS.equals(session.getPaymentStatus());
+    }
+
+    private boolean canBePaid(final Booking booking) {
+        return booking.getStatus() == BookingStatus.HOLD
+                || booking.getStatus() == BookingStatus.RESERVED;
+    }
+
+    private void extendHoldPaymentWindow(final Booking booking) {
+        if (booking.getStatus() == BookingStatus.HOLD) {
+            booking.extendExpiration(OffsetDateTime.now(clock).plus(BookingSessionDurations.PAYMENT));
+        }
+    }
+
+    private String cancelUrl(final Booking booking) {
+        if (booking.getStatus() == BookingStatus.RESERVED) {
+            return frontendUrlService.reservationCheckoutCancelUrl();
+        }
+
+        return frontendUrlService.checkoutCancelUrl(
+                booking.getProjection().getMovie().getId(),
+                booking.getProjection().getId()
+        );
     }
 
     private boolean isExpectedCheckoutSession(final Payment payment, final Session session) {

@@ -14,6 +14,7 @@ import java.util.UUID;
 public class FrontendUrlService {
 
     private static final String CHECKOUT_SUCCESS_PATH = "/checkout/success";
+    private static final String PROFILE_RESERVATIONS_PATH = "/profile/reservations";
     private static final String TICKET_CONFIRMATION_PATH = "/tickets/confirmation";
 
     private final FrontendProperties frontendProperties;
@@ -34,6 +35,16 @@ public class FrontendUrlService {
                 .queryParam("payment", "cancelled")
                 .build(movieId)
                 .toString();
+    }
+
+    public String reservationCheckoutCancelUrl() {
+        return UriComponentsBuilder
+                .fromUriString(normalizedFrontendBaseUrl())
+                .path(PROFILE_RESERVATIONS_PATH)
+                .queryParam("payment", "cancelled")
+                .build()
+                .encode()
+                .toUriString();
     }
 
     public String ticketConfirmationUrl(final UUID ticketCode) {
