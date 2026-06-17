@@ -100,6 +100,33 @@ class EmailNotificationServiceTest {
         verify(templateEngine).process(eq("ticket-purchase-confirmation-email"), any(Context.class));
     }
 
+    @Test
+    void shouldSendTicketReservationConfirmationSuccessfully() throws Exception {
+        final MimeMessage mimeMessage = mock(MimeMessage.class);
+
+        setupMocking(mimeMessage);
+        when(templateEngine.process(eq("ticket-reservation-confirmation-email"), any(Context.class)))
+                .thenReturn("<html>Reservation Confirmation</html>");
+
+        emailNotificationService.sendTicketReservationConfirmation(
+                "user@example.com",
+                "John Doe",
+                UUID.fromString("00000000-0000-0000-0000-000000000111"),
+                "Mandalorian",
+                "Banja Luka",
+                "Cinebh Arena",
+                "Hall 1",
+                OffsetDateTime.parse("2026-06-15T18:00:00Z"),
+                OffsetDateTime.parse("2026-06-15T17:00:00Z"),
+                List.of("A1", "A2"),
+                BigDecimal.valueOf(14),
+                "BAM"
+        );
+
+        verify(mailSender).send(mimeMessage);
+        verify(templateEngine).process(eq("ticket-reservation-confirmation-email"), any(Context.class));
+    }
+
     private void setupMocking(final MimeMessage mimeMessage) {
         ReflectionTestUtils.setField(emailNotificationService, "fromAddress", "slavisa.covakusic@student.etf.unibl.org");
         ReflectionTestUtils.setField(emailNotificationService, "fromName", "Cinebh");

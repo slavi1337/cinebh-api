@@ -25,4 +25,19 @@ public interface NotificationService {
             BigDecimal totalPrice,
             String currency
     );
+
+    void sendTicketReservationConfirmation(
+            String toEmail,
+            String toName,
+            UUID bookingId,
+            String movieTitle,
+            String cityName,
+            String venueName,
+            String hallName,
+            OffsetDateTime projectionStartTime,
+            OffsetDateTime reservationExpiresAt,
+            List<String> seats,
+            BigDecimal totalPrice,
+            String currency
+    );
 }

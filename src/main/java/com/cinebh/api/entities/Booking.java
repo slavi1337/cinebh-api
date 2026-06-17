@@ -128,6 +128,11 @@ public class Booking {
         status = BookingStatus.PAID;
     }
 
+    public void markReserved(final OffsetDateTime expiresAt) {
+        status = BookingStatus.RESERVED;
+        this.expiresAt = expiresAt;
+    }
+
     public void extendExpiration(final OffsetDateTime expiresAt) {
         this.expiresAt = expiresAt;
     }

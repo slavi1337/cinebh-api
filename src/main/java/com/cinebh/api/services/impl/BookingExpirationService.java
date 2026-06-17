@@ -11,25 +11,32 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class BookingExpirationService {
 
+    private static final Set<BookingStatus> EXPIRABLE_STATUSES = EnumSet.of(
+            BookingStatus.HOLD,
+            BookingStatus.RESERVED
+    );
+
     private final BookingRepository bookingRepository;
     private final ProjectionSeatEventPublisher projectionSeatEventPublisher;
     private final Clock clock;
 
-    @Scheduled(fixedDelayString = "${cinebh.booking.hold-cleanup-delay-ms:30000}")
+    @Scheduled(fixedDelayString = "${cinebh.booking.cleanup-delay-ms:${cinebh.booking.hold-cleanup-delay-ms:30000}}")
     @Transactional
-    public void expireExpiredHolds() {
-        final List<Booking> expiredHolds = bookingRepository.findExpiredByStatusForUpdate(
-                BookingStatus.HOLD,
+    public void expireExpiredBookings() {
+        final List<Booking> expiredBookings = bookingRepository.findExpiredByStatusesForUpdate(
+                EXPIRABLE_STATUSES,
                 OffsetDateTime.now(clock)
         );
 
-        expiredHolds.forEach(booking -> {
+        expiredBookings.forEach(booking -> {
             booking.expire();
             projectionSeatEventPublisher.publishSeatMapChanged(booking.getProjection().getId());
         });

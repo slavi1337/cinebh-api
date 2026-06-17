@@ -98,4 +98,4 @@ app:
 
 cinebh:
   booking:
-    hold-cleanup-delay-ms: 30000
+    cleanup-delay-ms: 30000

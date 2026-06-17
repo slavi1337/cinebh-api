@@ -20,11 +20,13 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -59,12 +61,12 @@ class BookingExpirationServiceTest {
                 FIXED_CLOCK
         );
 
-        when(bookingRepository.findExpiredByStatusForUpdate(
-                BookingStatus.HOLD,
-                OffsetDateTime.now(FIXED_CLOCK)
+        when(bookingRepository.findExpiredByStatusesForUpdate(
+                eq(EnumSet.of(BookingStatus.HOLD, BookingStatus.RESERVED)),
+                eq(OffsetDateTime.now(FIXED_CLOCK))
         )).thenReturn(List.of(booking));
 
-        expirationService.expireExpiredHolds();
+        expirationService.expireExpiredBookings();
 
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.EXPIRED);
         assertThat(booking.getTotalPrice()).isEqualByComparingTo(BigDecimal.ZERO);

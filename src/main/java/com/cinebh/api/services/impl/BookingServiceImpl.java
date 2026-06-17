@@ -2,6 +2,7 @@ package com.cinebh.api.services.impl;
 
 import com.cinebh.api.dto.booking.BookingHoldRequest;
 import com.cinebh.api.dto.booking.BookingHoldResponse;
+import com.cinebh.api.dto.booking.ReservationResponse;
 import com.cinebh.api.dto.booking.SeatAvailabilityStatus;
 import com.cinebh.api.dto.booking.SeatMapResponse;
 import com.cinebh.api.dto.booking.SeatResponse;
@@ -21,6 +22,7 @@ import com.cinebh.api.repositories.ProjectionRepository;
 import com.cinebh.api.repositories.SeatPriceRepository;
 import com.cinebh.api.repositories.SeatTemplateRepository;
 import com.cinebh.api.services.BookingService;
+import com.cinebh.api.services.NotificationService;
 import com.cinebh.api.utils.BookingSessionDurations;
 import com.cinebh.api.utils.BookingSeatUtils;
 import com.cinebh.api.utils.SecurityUtils;
@@ -50,6 +52,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
+    private static final String DEFAULT_CURRENCY = "BAM";
     private static final Set<BookingStatus> BLOCKING_STATUSES = EnumSet.of(
             BookingStatus.HOLD,
             BookingStatus.RESERVED,
@@ -64,12 +67,13 @@ public class BookingServiceImpl implements BookingService {
     private final BookingExpirationService bookingExpirationService;
     private final SecurityUtils securityUtils;
     private final ProjectionSeatEventPublisher projectionSeatEventPublisher;
+    private final NotificationService notificationService;
     private final Clock clock;
 
     @Override
     @Transactional
     public SeatMapResponse getSeatMap(final UUID projectionId) {
-        bookingExpirationService.expireExpiredHolds();
+        bookingExpirationService.expireExpiredBookings();
 
         final User currentUser = securityUtils.getCurrentUser();
         final Projection projection = findProjection(projectionId);
@@ -100,6 +104,10 @@ public class BookingServiceImpl implements BookingService {
                 projection.getId(),
                 projection.getMovie().getId(),
                 projection.getMovie().getTitle(),
+                findCoverImageUrl(projection.getMovie().getId()),
+                projection.getMovie().getPgRating(),
+                projection.getMovie().getLanguage(),
+                projection.getMovie().getDurationMinutes(),
                 projection.getHall().getVenue().getCity().getName(),
                 projection.getHall().getVenue().getName(),
                 projection.getHall().getName(),
@@ -113,7 +121,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingHoldResponse holdSeats(final BookingHoldRequest request) {
-        bookingExpirationService.expireExpiredHolds();
+        bookingExpirationService.expireExpiredBookings();
 
         final User currentUser = securityUtils.getCurrentUser();
         final Projection projection = findProjection(request.projectionId());
@@ -147,7 +155,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void cancelHold(final UUID bookingId) {
-        bookingExpirationService.expireExpiredHolds();
+        bookingExpirationService.expireExpiredBookings();
 
         final User currentUser = securityUtils.getCurrentUser();
         final Booking booking = bookingRepository.findByIdWithSeats(bookingId)
@@ -165,6 +173,67 @@ public class BookingServiceImpl implements BookingService {
         projectionSeatEventPublisher.publishSeatMapChanged(booking.getProjection().getId());
     }
 
+    @Override
+    @Transactional
+    public ReservationResponse reserveHold(final UUID bookingId) {
+        bookingExpirationService.expireExpiredBookings();
+
+        final User currentUser = securityUtils.getCurrentUser();
+        final Booking booking = bookingRepository.findByIdWithDetailsForUpdate(bookingId)
+                .orElseThrow(() -> new ApiException("Booking hold not found.", HttpStatus.NOT_FOUND));
+
+        validateBookingCanBeReserved(booking, currentUser);
+
+        final OffsetDateTime reservationExpiresAt = reservationExpirationTime(booking);
+        booking.markReserved(reservationExpiresAt);
+
+        final Booking savedBooking = bookingRepository.saveAndFlush(booking);
+        projectionSeatEventPublisher.publishSeatMapChanged(savedBooking.getProjection().getId());
+        sendReservationConfirmation(savedBooking);
+
+        return toReservationResponse(savedBooking, findCoverImageUrl(savedBooking));
+    }
+
+    @Override
+    @Transactional
+    public List<ReservationResponse> getReservations() {
+        bookingExpirationService.expireExpiredBookings();
+
+        final User currentUser = securityUtils.getCurrentUser();
+        final List<Booking> reservations =
+                bookingRepository.findReservationsByUserId(currentUser.getId(), OffsetDateTime.now(clock));
+        final Map<UUID, String> coverImageUrlsByMovieId = findCoverImageUrlsByMovieId(reservations);
+
+        return reservations
+                .stream()
+                .map(booking -> toReservationResponse(
+                        booking,
+                        coverImageUrlsByMovieId.get(booking.getProjection().getMovie().getId())
+                ))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void cancelReservation(final UUID bookingId) {
+        bookingExpirationService.expireExpiredBookings();
+
+        final User currentUser = securityUtils.getCurrentUser();
+        final Booking booking = bookingRepository.findByIdWithDetailsForUpdate(bookingId)
+                .orElseThrow(() -> new ApiException("Reservation not found.", HttpStatus.NOT_FOUND));
+
+        if (!booking.belongsTo(currentUser)) {
+            throw new ApiException("Reservation not found.", HttpStatus.NOT_FOUND);
+        }
+
+        if (booking.getStatus() != BookingStatus.RESERVED) {
+            throw new ApiException("Only active reservations can be cancelled.", HttpStatus.BAD_REQUEST);
+        }
+
+        booking.cancel();
+        projectionSeatEventPublisher.publishSeatMapChanged(booking.getProjection().getId());
+    }
+
     private Projection findProjection(final UUID projectionId) {
         return projectionRepository.findByIdWithDetails(projectionId)
                 .orElseThrow(() -> new ApiException("Projection not found.", HttpStatus.NOT_FOUND));
@@ -174,6 +243,37 @@ public class BookingServiceImpl implements BookingService {
         if (!projection.getStartTime().isAfter(OffsetDateTime.now(clock))) {
             throw new ApiException("Projection is no longer available for booking.", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private void validateBookingCanBeReserved(final Booking booking, final User currentUser) {
+        if (!booking.belongsTo(currentUser)) {
+            throw new ApiException("Booking hold not found.", HttpStatus.NOT_FOUND);
+        }
+
+        if (booking.getStatus() != BookingStatus.HOLD) {
+            throw new ApiException("Only active booking holds can be reserved.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (booking.isExpiredAt(OffsetDateTime.now(clock))) {
+            booking.expire();
+            projectionSeatEventPublisher.publishSeatMapChanged(booking.getProjection().getId());
+            throw new ApiException("Booking hold has expired.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (BookingSeatUtils.activeSeats(booking).isEmpty()) {
+            throw new ApiException("Select at least one seat before reservation.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!reservationExpirationTime(booking).isAfter(OffsetDateTime.now(clock))) {
+            throw new ApiException(
+                    "Reservations must be created at least one hour before projection start.",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+    }
+
+    private OffsetDateTime reservationExpirationTime(final Booking booking) {
+        return booking.getProjection().getStartTime().minus(BookingSessionDurations.RESERVATION_CUTOFF);
     }
 
     private Optional<Booking> findCurrentUserHold(final User currentUser, final UUID projectionId) {
@@ -301,16 +401,61 @@ public class BookingServiceImpl implements BookingService {
                 booking.getProjection().getId(),
                 booking.getExpiresAt(),
                 booking.getTotalPrice(),
-                booking.getSeats()
-                        .stream()
-                        .filter(BookingSeat::isActive)
-                        .map(this::toSelectedSeatResponse)
-                        .sorted(BookingSeatUtils.seatPositionComparator(
-                                SelectedSeatResponse::row,
-                                SelectedSeatResponse::number
-                        ))
-                        .toList()
+                activeSelectedSeats(booking)
         );
+    }
+
+    private ReservationResponse toReservationResponse(final Booking booking, final String posterImageUrl) {
+        return new ReservationResponse(
+                booking.getId(),
+                booking.getProjection().getMovie().getId(),
+                booking.getProjection().getId(),
+                booking.getProjection().getMovie().getTitle(),
+                posterImageUrl,
+                booking.getProjection().getMovie().getPgRating(),
+                booking.getProjection().getMovie().getLanguage(),
+                booking.getProjection().getMovie().getDurationMinutes(),
+                booking.getProjection().getHall().getVenue().getCity().getName(),
+                booking.getProjection().getHall().getVenue().getName(),
+                booking.getProjection().getHall().getName(),
+                booking.getProjection().getStartTime(),
+                booking.getExpiresAt(),
+                booking.getTotalPrice(),
+                activeSelectedSeats(booking)
+        );
+    }
+
+    private String findCoverImageUrl(final Booking booking) {
+        return findCoverImageUrl(booking.getProjection().getMovie().getId());
+    }
+
+    private String findCoverImageUrl(final UUID movieId) {
+        return bookingRepository.findCoverImageUrlsByMovieIds(List.of(movieId)).get(movieId);
+    }
+
+    private Map<UUID, String> findCoverImageUrlsByMovieId(final List<Booking> bookings) {
+        if (bookings.isEmpty()) {
+            return Map.of();
+        }
+
+        final List<UUID> movieIds = bookings.stream()
+                .map(booking -> booking.getProjection().getMovie().getId())
+                .distinct()
+                .toList();
+
+        return bookingRepository.findCoverImageUrlsByMovieIds(movieIds);
+    }
+
+    private List<SelectedSeatResponse> activeSelectedSeats(final Booking booking) {
+        return booking.getSeats()
+                .stream()
+                .filter(BookingSeat::isActive)
+                .map(this::toSelectedSeatResponse)
+                .sorted(BookingSeatUtils.seatPositionComparator(
+                        SelectedSeatResponse::row,
+                        SelectedSeatResponse::number
+                ))
+                .toList();
     }
 
     private SelectedSeatResponse toSelectedSeatResponse(final BookingSeat bookingSeat) {
@@ -321,5 +466,30 @@ public class BookingServiceImpl implements BookingService {
                 bookingSeat.getSeatTemplate().getType(),
                 bookingSeat.getPriceSnapshot()
         );
+    }
+
+    private void sendReservationConfirmation(final Booking booking) {
+        notificationService.sendTicketReservationConfirmation(
+                booking.getUser().getEmail(),
+                fullName(booking.getUser()),
+                booking.getId(),
+                booking.getProjection().getMovie().getTitle(),
+                booking.getProjection().getHall().getVenue().getCity().getName(),
+                booking.getProjection().getHall().getVenue().getName(),
+                booking.getProjection().getHall().getName(),
+                booking.getProjection().getStartTime(),
+                booking.getExpiresAt(),
+                BookingSeatUtils.activeSeatLabels(booking),
+                booking.getTotalPrice(),
+                DEFAULT_CURRENCY
+        );
+    }
+
+    private String fullName(final User user) {
+        final String firstName = user.getFirstName();
+        final String lastName = user.getLastName();
+        final String fullName = ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
+
+        return fullName.isBlank() ? user.getEmail() : fullName;
     }
 }
