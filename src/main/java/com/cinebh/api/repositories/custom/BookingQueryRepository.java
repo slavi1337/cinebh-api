@@ -34,6 +34,8 @@ public interface BookingQueryRepository {
 
     List<Booking> findReservationsByUserId(UUID userId, OffsetDateTime now);
 
+    List<Booking> findPaidBookingsByUserId(UUID userId, OffsetDateTime now, boolean upcoming);
+
     Map<UUID, String> findCoverImageUrlsByMovieIds(Collection<UUID> movieIds);
 
     List<Booking> findExpiredByStatusesForUpdate(Collection<BookingStatus> statuses, OffsetDateTime now);

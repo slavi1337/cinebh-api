@@ -194,6 +194,7 @@ class AuthServiceImplTest {
         final String email = "test@cinebh.com";
         final User user = new User();
         user.setEmail(email);
+        user.setActive(true);
         final Claims claims = mock(Claims.class);
 
         final HttpServletRequest request = mock(HttpServletRequest.class);
@@ -210,6 +211,29 @@ class AuthServiceImplTest {
         authService.refresh(request, response);
 
         verify(cookieUtils).setAccessTokenCookie(response, "new-access-token");
+    }
+
+    @Test
+    void shouldThrowExceptionWhenRefreshingInactiveUser() {
+        final String refreshToken = "valid-refresh-token";
+        final String email = "inactive@cinebh.com";
+        final User user = new User();
+        user.setEmail(email);
+        user.setActive(false);
+        final Claims claims = mock(Claims.class);
+
+        final HttpServletRequest request = mock(HttpServletRequest.class);
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        when(cookieUtils.extractCookie(request, "refresh_token")).thenReturn(Optional.of(refreshToken));
+        when(jwtService.extractClaims(refreshToken)).thenReturn(claims);
+        when(claims.getSubject()).thenReturn(email);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.refresh(request, response))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.UNAUTHORIZED)
+                .hasMessage("Invalid or expired refresh token.");
     }
 
     @Test

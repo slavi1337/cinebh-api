@@ -6,7 +6,6 @@ import com.cinebh.api.dto.booking.ReservationResponse;
 import com.cinebh.api.dto.booking.SeatAvailabilityStatus;
 import com.cinebh.api.dto.booking.SeatMapResponse;
 import com.cinebh.api.dto.booking.SeatResponse;
-import com.cinebh.api.dto.booking.SelectedSeatResponse;
 import com.cinebh.api.entities.Booking;
 import com.cinebh.api.entities.BookingSeat;
 import com.cinebh.api.entities.Projection;
@@ -16,6 +15,7 @@ import com.cinebh.api.entities.User;
 import com.cinebh.api.entities.enums.BookingStatus;
 import com.cinebh.api.entities.enums.SeatType;
 import com.cinebh.api.exceptions.ApiException;
+import com.cinebh.api.mappers.BookingResponseMapper;
 import com.cinebh.api.repositories.BookingRepository;
 import com.cinebh.api.repositories.BookingSeatRepository;
 import com.cinebh.api.repositories.ProjectionRepository;
@@ -69,6 +69,8 @@ public class BookingServiceImpl implements BookingService {
     private final SecurityUtils securityUtils;
     private final ProjectionSeatEventPublisher projectionSeatEventPublisher;
     private final NotificationService notificationService;
+    private final BookingResponseMapper bookingResponseMapper;
+    private final BookingCoverImageResolver bookingCoverImageResolver;
     private final Clock clock;
 
     @Override
@@ -103,7 +105,7 @@ public class BookingServiceImpl implements BookingService {
                 projection.getId(),
                 projection.getMovie().getId(),
                 projection.getMovie().getTitle(),
-                findCoverImageUrl(projection.getMovie().getId()),
+                bookingCoverImageResolver.findCoverImageUrl(projection.getMovie().getId()),
                 projection.getMovie().getPgRating(),
                 projection.getMovie().getLanguage(),
                 projection.getMovie().getDurationMinutes(),
@@ -184,7 +186,10 @@ public class BookingServiceImpl implements BookingService {
         projectionSeatEventPublisher.publishSeatMapChanged(savedBooking.getProjection().getId());
         sendReservationConfirmation(savedBooking);
 
-        return toReservationResponse(savedBooking, findCoverImageUrl(savedBooking));
+        return bookingResponseMapper.toReservationResponse(
+                savedBooking,
+                bookingCoverImageResolver.findCoverImageUrl(savedBooking)
+        );
     }
 
     @Override
@@ -193,11 +198,12 @@ public class BookingServiceImpl implements BookingService {
         final User currentUser = securityUtils.getCurrentUser();
         final List<Booking> reservations =
                 bookingRepository.findReservationsByUserId(currentUser.getId(), OffsetDateTime.now(clock));
-        final Map<UUID, String> coverImageUrlsByMovieId = findCoverImageUrlsByMovieId(reservations);
+        final Map<UUID, String> coverImageUrlsByMovieId =
+                bookingCoverImageResolver.findCoverImageUrlsByMovieId(reservations);
 
         return reservations
                 .stream()
-                .map(booking -> toReservationResponse(
+                .map(booking -> bookingResponseMapper.toReservationResponse(
                         booking,
                         coverImageUrlsByMovieId.get(booking.getProjection().getMovie().getId())
                 ))
@@ -399,70 +405,7 @@ public class BookingServiceImpl implements BookingService {
                 booking.getProjection().getId(),
                 booking.getExpiresAt(),
                 booking.getTotalPrice(),
-                activeSelectedSeats(booking)
-        );
-    }
-
-    private ReservationResponse toReservationResponse(final Booking booking, final String posterImageUrl) {
-        return new ReservationResponse(
-                booking.getId(),
-                booking.getProjection().getMovie().getId(),
-                booking.getProjection().getId(),
-                booking.getProjection().getMovie().getTitle(),
-                posterImageUrl,
-                booking.getProjection().getMovie().getPgRating(),
-                booking.getProjection().getMovie().getLanguage(),
-                booking.getProjection().getMovie().getDurationMinutes(),
-                booking.getProjection().getHall().getVenue().getCity().getName(),
-                booking.getProjection().getHall().getVenue().getName(),
-                booking.getProjection().getHall().getName(),
-                booking.getProjection().getStartTime(),
-                booking.getExpiresAt(),
-                booking.getTotalPrice(),
-                activeSelectedSeats(booking)
-        );
-    }
-
-    private String findCoverImageUrl(final Booking booking) {
-        return findCoverImageUrl(booking.getProjection().getMovie().getId());
-    }
-
-    private String findCoverImageUrl(final UUID movieId) {
-        return bookingRepository.findCoverImageUrlsByMovieIds(List.of(movieId)).get(movieId);
-    }
-
-    private Map<UUID, String> findCoverImageUrlsByMovieId(final List<Booking> bookings) {
-        if (bookings.isEmpty()) {
-            return Map.of();
-        }
-
-        final List<UUID> movieIds = bookings.stream()
-                .map(booking -> booking.getProjection().getMovie().getId())
-                .distinct()
-                .toList();
-
-        return bookingRepository.findCoverImageUrlsByMovieIds(movieIds);
-    }
-
-    private List<SelectedSeatResponse> activeSelectedSeats(final Booking booking) {
-        return booking.getSeats()
-                .stream()
-                .filter(BookingSeat::isActive)
-                .map(this::toSelectedSeatResponse)
-                .sorted(BookingSeatUtils.seatPositionComparator(
-                        SelectedSeatResponse::row,
-                        SelectedSeatResponse::number
-                ))
-                .toList();
-    }
-
-    private SelectedSeatResponse toSelectedSeatResponse(final BookingSeat bookingSeat) {
-        return new SelectedSeatResponse(
-                bookingSeat.getSeatTemplate().getId(),
-                bookingSeat.getSeatTemplate().getRowNum(),
-                bookingSeat.getSeatTemplate().getSeatNum(),
-                bookingSeat.getSeatTemplate().getType(),
-                bookingSeat.getPriceSnapshot()
+                bookingResponseMapper.toSelectedSeatResponses(booking)
         );
     }
 

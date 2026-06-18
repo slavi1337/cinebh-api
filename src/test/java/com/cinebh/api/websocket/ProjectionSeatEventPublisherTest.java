@@ -31,9 +31,7 @@ class ProjectionSeatEventPublisherTest {
 
     @AfterEach
     void tearDown() {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.clearSynchronization();
-        }
+        TransactionSynchronizationManager.clear();
     }
 
     @Test

@@ -164,6 +164,10 @@ public class AuthServiceImpl implements AuthService {
             final User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new ApiException("User not found.", HttpStatus.UNAUTHORIZED));
 
+            if (!user.isActive()) {
+                throw new ApiException("User is inactive.", HttpStatus.UNAUTHORIZED);
+            }
+
             final String newAccessToken = jwtService.generateAccessToken(user);
             cookieUtils.setAccessTokenCookie(response, newAccessToken);
         } catch (Exception e) {
