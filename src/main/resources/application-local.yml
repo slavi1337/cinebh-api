@@ -45,6 +45,11 @@ server:
 app:
   frontend:
     base-url: https://cinebh.com:5173
+  payment:
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      currency: ${STRIPE_CURRENCY:bam}
   storage:
     bucket: cinebh
     region: eu-central-1
@@ -90,3 +95,7 @@ app:
       "CineBHStudentProjectInternship/1.0 (student-project; contact: slavisa.covakusic@student.etf.unibl.org)"
     country-codes: ba
     country-name: Bosnia and Herzegovina
+
+cinebh:
+  booking:
+    cleanup-delay-ms: 30000

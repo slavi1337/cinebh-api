@@ -105,8 +105,8 @@ public class AuthController {
             summary = "Logout user",
             description = "Clears JWT authentication cookies"
     )
-    public ResponseEntity<Void> logout(final HttpServletResponse response) {
-        authService.logout(response);
+    public ResponseEntity<Void> logout(final HttpServletRequest request, final HttpServletResponse response) {
+        authService.logout(request, response);
         return ResponseEntity.noContent().build();
     }
 

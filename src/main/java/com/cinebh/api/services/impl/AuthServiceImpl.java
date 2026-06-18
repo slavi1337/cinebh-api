@@ -18,15 +18,19 @@ import com.cinebh.api.utils.SecurityUtils;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
+
+import static com.cinebh.api.utils.UserUtils.fullNameOrEmail;
 
 @Service
 @RequiredArgsConstructor
@@ -87,7 +91,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         final String code = verificationService.generateAndSaveCode(user, VerificationCodeType.ACCOUNT_VERIFICATION);
-        notificationService.sendAccountVerificationCode(user.getEmail(), getFullName(user), code);
+        notificationService.sendAccountVerificationCode(user.getEmail(), fullNameOrEmail(user), code);
     }
 
     @Override
@@ -125,7 +129,7 @@ public class AuthServiceImpl implements AuthService {
             throw new ApiException("Invalid email or password.", HttpStatus.UNAUTHORIZED);
         }
 
-        final String fullName = getFullName(user);
+        final String fullName = fullNameOrEmail(user);
 
         if (!user.isActive()) {
             final String code = verificationService.generateAndSaveCode(user, VerificationCodeType.ACCOUNT_VERIFICATION);
@@ -145,7 +149,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public LoginResponse getCurrentUser() {
         final User user = securityUtils.getCurrentUser();
-        return new LoginResponse(user.getId(), user.getEmail(), getFullName(user), user.getRole().name());
+        return new LoginResponse(user.getId(), user.getEmail(), fullNameOrEmail(user), user.getRole().name());
     }
 
     @Override
@@ -168,13 +172,17 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void logout(final HttpServletResponse response) {
-        cookieUtils.clearTokenCookies(response);
+    public void logout(final HttpServletRequest request, final HttpServletResponse response) {
+        cookieUtils.clearAuthenticationCookies(response);
+        invalidateSession(request);
+        SecurityContextHolder.clearContext();
     }
 
-    private String getFullName(final User user) {
-        return (user.getFirstName() != null && user.getLastName() != null)
-                ? user.getFirstName() + " " + user.getLastName()
-                : user.getEmail().split("@")[0];
+    private void invalidateSession(final HttpServletRequest request) {
+        final HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
     }
+
 }

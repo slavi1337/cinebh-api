@@ -8,8 +8,10 @@ import com.cinebh.api.utils.CookieUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -38,7 +40,18 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         final String refreshToken = jwtService.generateRefreshToken(user, true);
 
         cookieUtils.setTokenCookies(response, accessToken, refreshToken, true);
+        clearOAuth2Session(request, response);
 
         response.sendRedirect(frontendProperties.baseUrl() + "/?auth=google-success");
+    }
+
+    private void clearOAuth2Session(final HttpServletRequest request, final HttpServletResponse response) {
+        final HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+
+        SecurityContextHolder.clearContext();
+        cookieUtils.clearSessionCookie(response);
     }
 }

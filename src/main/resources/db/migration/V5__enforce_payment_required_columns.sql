@@ -1,0 +1,3 @@
+ALTER TABLE payments
+    ALTER COLUMN currency SET NOT NULL,
+    ALTER COLUMN status SET NOT NULL;

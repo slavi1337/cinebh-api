@@ -97,14 +97,39 @@ class CookieUtilsTest {
 
         cookieUtils.clearTokenCookies(response);
 
-        final List<String> cookieHeaders = captureCookieHeaders(response, 2);
+        final List<String> cookieHeaders = captureCookieHeaders(response, 8);
 
-        assertThat(cookieHeaders).anyMatch(header ->
+        assertThat(cookieHeaders).filteredOn(header ->
                 header.contains("access_token=") && header.contains("Max-Age=0")
-        );
-        assertThat(cookieHeaders).anyMatch(header ->
+        ).hasSize(4);
+        assertThat(cookieHeaders).filteredOn(header ->
                 header.contains("refresh_token=") && header.contains("Max-Age=0")
-        );
+        ).hasSize(4);
+        assertThat(cookieHeaders).anyMatch(header -> header.contains("Domain=localhost"));
+        assertThat(cookieHeaders).anyMatch(header -> !header.contains("Domain="));
+        assertThat(cookieHeaders).anyMatch(header -> header.contains("Path=/api/v1"));
+        assertThat(cookieHeaders).anyMatch(header -> header.contains("Path=/;"));
+    }
+
+    @Test
+    void shouldClearAuthenticationCookiesSuccessfully() {
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        stubCookieSettings();
+
+        cookieUtils.clearAuthenticationCookies(response);
+
+        final List<String> cookieHeaders = captureCookieHeaders(response, 12);
+
+        assertThat(cookieHeaders).filteredOn(header ->
+                header.contains("access_token=") && header.contains("Max-Age=0")
+        ).hasSize(4);
+        assertThat(cookieHeaders).filteredOn(header ->
+                header.contains("refresh_token=") && header.contains("Max-Age=0")
+        ).hasSize(4);
+        assertThat(cookieHeaders).filteredOn(header ->
+                header.contains("JSESSIONID=") && header.contains("Max-Age=0")
+        ).hasSize(4);
     }
 
     @Test

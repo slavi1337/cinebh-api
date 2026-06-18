@@ -7,6 +7,13 @@ spring:
     show-sql: false
 
 app:
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:https://cinebhapp.praksa.abhapp.com}
+  payment:
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      currency: ${STRIPE_CURRENCY:bam}
   storage:
     bucket: cinebh
     region: eu-central-1
