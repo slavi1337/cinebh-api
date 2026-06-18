@@ -37,8 +37,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,6 +72,9 @@ class AuthServiceImplTest {
 
     @Mock
     private CookieUtils cookieUtils;
+
+    @Mock
+    private AuthenticationRateLimitService authenticationRateLimitService;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -167,7 +172,57 @@ class AuthServiceImplTest {
         final LoginResponse loginResponse = authService.login(request, response);
 
         assertThat(loginResponse.email()).isEqualTo(testUser.getEmail());
+        verify(authenticationRateLimitService).clearFailedLoginAttempts(request.email());
         verify(cookieUtils).setTokenCookies(response, "access-token", "refresh-token", false);
+    }
+
+    @Test
+    void shouldRecordFailedLoginWhenPasswordIsInvalid() {
+        final LoginRequest request = new LoginRequest("test@cinebh.com", "WrongPassword123", false);
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches(request.password(), testUser.getPasswordHash())).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login(request, response))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.UNAUTHORIZED)
+                .hasMessage("Invalid email or password.");
+
+        verify(authenticationRateLimitService).recordFailedLogin(request.email());
+    }
+
+    @Test
+    void shouldRecordFailedLoginWhenEmailDoesNotExist() {
+        final LoginRequest request = new LoginRequest("missing@cinebh.com", "Password123", false);
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login(request, response))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.UNAUTHORIZED)
+                .hasMessage("Invalid email or password.");
+
+        verify(authenticationRateLimitService).recordFailedLogin(request.email());
+    }
+
+    @Test
+    void shouldRejectLoginWhenRateLimitIsExceeded() {
+        final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", false);
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        doThrow(new ApiException(
+                "Too many failed login attempts. Please try again later.",
+                HttpStatus.TOO_MANY_REQUESTS
+        )).when(authenticationRateLimitService).assertLoginAllowed(request.email());
+
+        assertThatThrownBy(() -> authService.login(request, response))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.TOO_MANY_REQUESTS)
+                .hasMessage("Too many failed login attempts. Please try again later.");
+
+        verifyNoInteractions(userRepository, passwordEncoder, jwtService, cookieUtils);
     }
 
     @Test
@@ -249,6 +304,7 @@ class AuthServiceImplTest {
         final LoginResponse loginResponse = authService.login(request, response);
 
         assertThat(loginResponse.email()).isEqualTo(testUser.getEmail());
+        verify(authenticationRateLimitService).clearFailedLoginAttempts(request.email());
         verify(cookieUtils).setTokenCookies(response, "access-token", "refresh-token", true);
     }
 
