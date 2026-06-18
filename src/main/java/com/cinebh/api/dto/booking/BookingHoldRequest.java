@@ -1,5 +1,6 @@
 package com.cinebh.api.dto.booking;
 
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
@@ -9,7 +10,7 @@ public record BookingHoldRequest(
         @NotNull
         UUID projectionId,
 
-        @NotNull
+        @NotEmpty
         List<@NotNull UUID> seatTemplateIds
 ) {
 }

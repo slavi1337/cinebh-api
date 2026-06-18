@@ -30,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import static com.cinebh.api.utils.UserUtils.fullNameOrEmail;
+
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -89,7 +91,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         final String code = verificationService.generateAndSaveCode(user, VerificationCodeType.ACCOUNT_VERIFICATION);
-        notificationService.sendAccountVerificationCode(user.getEmail(), getFullName(user), code);
+        notificationService.sendAccountVerificationCode(user.getEmail(), fullNameOrEmail(user), code);
     }
 
     @Override
@@ -127,7 +129,7 @@ public class AuthServiceImpl implements AuthService {
             throw new ApiException("Invalid email or password.", HttpStatus.UNAUTHORIZED);
         }
 
-        final String fullName = getFullName(user);
+        final String fullName = fullNameOrEmail(user);
 
         if (!user.isActive()) {
             final String code = verificationService.generateAndSaveCode(user, VerificationCodeType.ACCOUNT_VERIFICATION);
@@ -147,7 +149,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public LoginResponse getCurrentUser() {
         final User user = securityUtils.getCurrentUser();
-        return new LoginResponse(user.getId(), user.getEmail(), getFullName(user), user.getRole().name());
+        return new LoginResponse(user.getId(), user.getEmail(), fullNameOrEmail(user), user.getRole().name());
     }
 
     @Override
@@ -183,9 +185,4 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private String getFullName(final User user) {
-        return (user.getFirstName() != null && user.getLastName() != null)
-                ? user.getFirstName() + " " + user.getLastName()
-                : user.getEmail().split("@")[0];
-    }
 }

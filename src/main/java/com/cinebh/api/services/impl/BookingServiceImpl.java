@@ -48,6 +48,8 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.cinebh.api.utils.UserUtils.fullNameOrEmail;
+
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
@@ -64,17 +66,14 @@ public class BookingServiceImpl implements BookingService {
     private final SeatPriceRepository seatPriceRepository;
     private final BookingRepository bookingRepository;
     private final BookingSeatRepository bookingSeatRepository;
-    private final BookingExpirationService bookingExpirationService;
     private final SecurityUtils securityUtils;
     private final ProjectionSeatEventPublisher projectionSeatEventPublisher;
     private final NotificationService notificationService;
     private final Clock clock;
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public SeatMapResponse getSeatMap(final UUID projectionId) {
-        bookingExpirationService.expireExpiredBookings();
-
         final User currentUser = securityUtils.getCurrentUser();
         final Projection projection = findProjection(projectionId);
         final Map<SeatType, BigDecimal> seatPrices = loadSeatPrices();
@@ -121,8 +120,6 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingHoldResponse holdSeats(final BookingHoldRequest request) {
-        bookingExpirationService.expireExpiredBookings();
-
         final User currentUser = securityUtils.getCurrentUser();
         final Projection projection = findProjection(request.projectionId());
         validateProjectionCanBeBooked(projection);
@@ -131,7 +128,7 @@ public class BookingServiceImpl implements BookingService {
         final List<SeatTemplate> selectedSeatTemplates = findRequestedSeatTemplates(requestedSeatIds);
         final Map<SeatType, BigDecimal> seatPrices = loadSeatPrices();
 
-        Booking booking = findCurrentUserHold(currentUser, projection.getId())
+        Booking booking = findCurrentUserHoldForUpdate(currentUser, projection.getId())
                 .orElseGet(() -> createHold(currentUser, projection));
 
         if (booking.isExpiredAt(OffsetDateTime.now(clock))) {
@@ -155,8 +152,6 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void cancelHold(final UUID bookingId) {
-        bookingExpirationService.expireExpiredBookings();
-
         final User currentUser = securityUtils.getCurrentUser();
         final Booking booking = bookingRepository.findByIdWithSeats(bookingId)
                 .orElseThrow(() -> new ApiException("Booking hold not found.", HttpStatus.NOT_FOUND));
@@ -176,8 +171,6 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public ReservationResponse reserveHold(final UUID bookingId) {
-        bookingExpirationService.expireExpiredBookings();
-
         final User currentUser = securityUtils.getCurrentUser();
         final Booking booking = bookingRepository.findByIdWithDetailsForUpdate(bookingId)
                 .orElseThrow(() -> new ApiException("Booking hold not found.", HttpStatus.NOT_FOUND));
@@ -195,10 +188,8 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ReservationResponse> getReservations() {
-        bookingExpirationService.expireExpiredBookings();
-
         final User currentUser = securityUtils.getCurrentUser();
         final List<Booking> reservations =
                 bookingRepository.findReservationsByUserId(currentUser.getId(), OffsetDateTime.now(clock));
@@ -216,8 +207,6 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void cancelReservation(final UUID bookingId) {
-        bookingExpirationService.expireExpiredBookings();
-
         final User currentUser = securityUtils.getCurrentUser();
         final Booking booking = bookingRepository.findByIdWithDetailsForUpdate(bookingId)
                 .orElseThrow(() -> new ApiException("Reservation not found.", HttpStatus.NOT_FOUND));
@@ -277,6 +266,15 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private Optional<Booking> findCurrentUserHold(final User currentUser, final UUID projectionId) {
+        return bookingRepository
+                .findLatestByUserProjectionAndStatus(
+                        currentUser.getId(),
+                        projectionId,
+                        BookingStatus.HOLD
+                );
+    }
+
+    private Optional<Booking> findCurrentUserHoldForUpdate(final User currentUser, final UUID projectionId) {
         return bookingRepository
                 .findLatestByUserProjectionAndStatusForUpdate(
                         currentUser.getId(),
@@ -471,7 +469,7 @@ public class BookingServiceImpl implements BookingService {
     private void sendReservationConfirmation(final Booking booking) {
         notificationService.sendTicketReservationConfirmation(
                 booking.getUser().getEmail(),
-                fullName(booking.getUser()),
+                fullNameOrEmail(booking.getUser()),
                 booking.getId(),
                 booking.getProjection().getMovie().getTitle(),
                 booking.getProjection().getHall().getVenue().getCity().getName(),
@@ -483,13 +481,5 @@ public class BookingServiceImpl implements BookingService {
                 booking.getTotalPrice(),
                 DEFAULT_CURRENCY
         );
-    }
-
-    private String fullName(final User user) {
-        final String firstName = user.getFirstName();
-        final String lastName = user.getLastName();
-        final String fullName = ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
-
-        return fullName.isBlank() ? user.getEmail() : fullName;
     }
 }

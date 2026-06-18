@@ -20,7 +20,6 @@ import com.cinebh.api.repositories.BookingSeatRepository;
 import com.cinebh.api.repositories.ProjectionRepository;
 import com.cinebh.api.repositories.SeatPriceRepository;
 import com.cinebh.api.repositories.SeatTemplateRepository;
-import com.cinebh.api.services.impl.BookingExpirationService;
 import com.cinebh.api.services.impl.BookingServiceImpl;
 import com.cinebh.api.utils.SecurityUtils;
 import com.cinebh.api.websocket.ProjectionSeatEventPublisher;
@@ -75,8 +74,6 @@ class BookingServiceImplTest {
     @Mock
     private BookingSeatRepository bookingSeatRepository;
     @Mock
-    private BookingExpirationService bookingExpirationService;
-    @Mock
     private SecurityUtils securityUtils;
     @Mock
     private ProjectionSeatEventPublisher projectionSeatEventPublisher;
@@ -97,7 +94,6 @@ class BookingServiceImplTest {
                 seatPriceRepository,
                 bookingRepository,
                 bookingSeatRepository,
-                bookingExpirationService,
                 securityUtils,
                 projectionSeatEventPublisher,
                 notificationService,
@@ -377,7 +373,7 @@ class BookingServiceImplTest {
         when(seatTemplateRepository.findAll()).thenReturn(List.of(regularSeat, vipSeat));
         when(bookingSeatRepository.findActiveSeatsForProjection(eq(PROJECTION_ID), any()))
                 .thenReturn(List.of());
-        when(bookingRepository.findLatestByUserProjectionAndStatusForUpdate(
+        when(bookingRepository.findLatestByUserProjectionAndStatus(
                 USER_ID,
                 PROJECTION_ID,
                 BookingStatus.HOLD

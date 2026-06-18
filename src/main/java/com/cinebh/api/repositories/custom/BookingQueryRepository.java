@@ -12,6 +12,12 @@ import java.util.UUID;
 
 public interface BookingQueryRepository {
 
+    Optional<Booking> findLatestByUserProjectionAndStatus(
+            UUID userId,
+            UUID projectionId,
+            BookingStatus status
+    );
+
     Optional<Booking> findLatestByUserProjectionAndStatusForUpdate(
             UUID userId,
             UUID projectionId,

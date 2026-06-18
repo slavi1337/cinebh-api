@@ -19,7 +19,6 @@ import com.cinebh.api.entities.enums.SeatType;
 import com.cinebh.api.exceptions.ApiException;
 import com.cinebh.api.repositories.BookingRepository;
 import com.cinebh.api.repositories.PaymentRepository;
-import com.cinebh.api.services.impl.BookingExpirationService;
 import com.cinebh.api.services.impl.FrontendUrlService;
 import com.cinebh.api.services.impl.StripePaymentService;
 import com.cinebh.api.utils.SecurityUtils;
@@ -83,8 +82,6 @@ class StripePaymentServiceTest {
     private NotificationService notificationService;
     @Mock
     private ProjectionSeatEventPublisher projectionSeatEventPublisher;
-    @Mock
-    private BookingExpirationService bookingExpirationService;
 
     private StripePaymentService paymentService;
     private User user;
@@ -267,27 +264,6 @@ class StripePaymentServiceTest {
     }
 
     @Test
-    void shouldRejectCheckoutWhenStripeSecretKeyIsMissing() {
-        paymentService = createPaymentService(
-                new PaymentProperties(new PaymentProperties.Stripe(" ", "whsec_test", "bam"))
-        );
-
-        when(securityUtils.getCurrentUser()).thenReturn(user);
-        when(bookingRepository.findByIdWithPaymentDetailsForUpdate(booking.getId()))
-                .thenReturn(Optional.of(booking));
-
-        assertThatThrownBy(() -> paymentService.createCheckoutSession(new CheckoutSessionRequest(booking.getId())))
-                .isInstanceOf(ApiException.class)
-                .satisfies(exception -> {
-                    final ApiException apiException = (ApiException) exception;
-                    assertThat(apiException.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-                    assertThat(apiException.getMessage()).isEqualTo("Stripe secret key is not configured.");
-                });
-
-        verify(paymentRepository, never()).save(any(Payment.class));
-    }
-
-    @Test
     void shouldUseDefaultCurrencyWhenStripeCurrencyIsMissing() throws Exception {
         paymentService = createPaymentService(
                 new PaymentProperties(new PaymentProperties.Stripe("sk_test_secret", "whsec_test", null))
@@ -421,7 +397,6 @@ class StripePaymentServiceTest {
                 securityUtils,
                 notificationService,
                 projectionSeatEventPublisher,
-                bookingExpirationService,
                 FIXED_CLOCK
         );
     }

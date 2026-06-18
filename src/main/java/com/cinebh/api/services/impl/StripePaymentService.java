@@ -41,6 +41,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Objects;
 
+import static com.cinebh.api.utils.UserUtils.fullNameOrEmail;
+
 @Service
 @RequiredArgsConstructor
 public class StripePaymentService implements PaymentService {
@@ -57,14 +59,11 @@ public class StripePaymentService implements PaymentService {
     private final SecurityUtils securityUtils;
     private final NotificationService notificationService;
     private final ProjectionSeatEventPublisher projectionSeatEventPublisher;
-    private final BookingExpirationService bookingExpirationService;
     private final Clock clock;
 
     @Override
     @Transactional
     public CheckoutSessionResponse createCheckoutSession(final CheckoutSessionRequest request) {
-        bookingExpirationService.expireExpiredBookings();
-
         final User currentUser = securityUtils.getCurrentUser();
         final Booking booking = bookingRepository.findByIdWithPaymentDetailsForUpdate(request.bookingId())
                 .orElseThrow(() -> new ApiException("Booking hold not found.", HttpStatus.NOT_FOUND));
@@ -75,7 +74,7 @@ public class StripePaymentService implements PaymentService {
             final Session session = Session.create(
                     buildSessionCreateParams(booking),
                     RequestOptions.builder()
-                            .setApiKey(stripeSecretKey())
+                            .setApiKey(stripeProperties().secretKey())
                             .build()
             );
             extendHoldPaymentWindow(booking);
@@ -104,7 +103,7 @@ public class StripePaymentService implements PaymentService {
 
         final Event event;
         try {
-            event = Webhook.constructEvent(payload, signatureHeader, stripeWebhookSecret());
+            event = Webhook.constructEvent(payload, signatureHeader, stripeProperties().webhookSecret());
         } catch (SignatureVerificationException | IllegalArgumentException exception) {
             log.warn("Stripe webhook signature or payload validation failed: {}", exception.getMessage());
             throw new ApiException("Invalid Stripe webhook payload or signature.", HttpStatus.BAD_REQUEST);
@@ -253,7 +252,7 @@ public class StripePaymentService implements PaymentService {
 
         notificationService.sendTicketPurchaseConfirmation(
                 booking.getUser().getEmail(),
-                fullName(booking.getUser()),
+                fullNameOrEmail(booking.getUser()),
                 booking.getId(),
                 booking.getTicketCode(),
                 booking.getProjection().getMovie().getTitle(),
@@ -322,22 +321,6 @@ public class StripePaymentService implements PaymentService {
                 && payment.getCurrency().equalsIgnoreCase(session.getCurrency());
     }
 
-    private String stripeSecretKey() {
-        final String secretKey = stripeProperties().secretKey();
-        if (secretKey == null || secretKey.isBlank()) {
-            throw new ApiException("Stripe secret key is not configured.", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return secretKey;
-    }
-
-    private String stripeWebhookSecret() {
-        final String webhookSecret = stripeProperties().webhookSecret();
-        if (webhookSecret == null || webhookSecret.isBlank()) {
-            throw new ApiException("Stripe webhook secret is not configured.", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return webhookSecret;
-    }
-
     private String stripeCurrency() {
         final String currency = stripeProperties().currency();
         return currency == null || currency.isBlank()
@@ -346,18 +329,6 @@ public class StripePaymentService implements PaymentService {
     }
 
     private PaymentProperties.Stripe stripeProperties() {
-        final PaymentProperties.Stripe stripe = paymentProperties.stripe();
-        if (stripe == null) {
-            throw new ApiException("Stripe payment configuration is missing.", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return stripe;
-    }
-
-    private String fullName(final User user) {
-        final String firstName = user.getFirstName();
-        final String lastName = user.getLastName();
-        final String fullName = ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
-
-        return fullName.isBlank() ? user.getEmail() : fullName;
+        return paymentProperties.stripe();
     }
 }

@@ -45,16 +45,24 @@ public class BookingQueryRepositoryImpl implements BookingQueryRepository {
     private final QCity city = QCity.city;
 
     @Override
+    public Optional<Booking> findLatestByUserProjectionAndStatus(
+            final UUID userId,
+            final UUID projectionId,
+            final BookingStatus status
+    ) {
+        return latestByUserProjectionAndStatusQuery(userId, projectionId, status)
+                .fetch()
+                .stream()
+                .findFirst();
+    }
+
+    @Override
     public Optional<Booking> findLatestByUserProjectionAndStatusForUpdate(
             final UUID userId,
             final UUID projectionId,
             final BookingStatus status
     ) {
-        return applyBookingGraph(selectDistinctBooking())
-                .where(booking.user.id.eq(userId)
-                        .and(booking.projection.id.eq(projectionId))
-                        .and(booking.status.eq(status)))
-                .orderBy(booking.createdAt.desc())
+        return latestByUserProjectionAndStatusQuery(userId, projectionId, status)
                 .setLockMode(LockModeType.PESSIMISTIC_WRITE)
                 .fetch()
                 .stream()
@@ -148,6 +156,18 @@ public class BookingQueryRepositoryImpl implements BookingQueryRepository {
                 .select(booking)
                 .distinct()
                 .from(booking);
+    }
+
+    private JPAQuery<Booking> latestByUserProjectionAndStatusQuery(
+            final UUID userId,
+            final UUID projectionId,
+            final BookingStatus status
+    ) {
+        return applyBookingGraph(selectDistinctBooking())
+                .where(booking.user.id.eq(userId)
+                        .and(booking.projection.id.eq(projectionId))
+                        .and(booking.status.eq(status)))
+                .orderBy(booking.createdAt.desc());
     }
 
     private JPAQuery<Booking> applyBookingGraph(final JPAQuery<Booking> query) {
