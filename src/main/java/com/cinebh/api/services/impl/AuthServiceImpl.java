@@ -122,17 +122,22 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(noRollbackFor = ApiException.class)
-    public LoginResponse login(final LoginRequest request, final HttpServletResponse response) {
-        authenticationRateLimitService.assertLoginAllowed(request.email());
+    public LoginResponse login(
+            final LoginRequest request,
+            final HttpServletRequest servletRequest,
+            final HttpServletResponse servletResponse
+    ) {
+        final String clientIpAddress = servletRequest.getRemoteAddr();
+        authenticationRateLimitService.assertLoginAllowed(request.email(), clientIpAddress);
 
         final User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> {
-                    authenticationRateLimitService.recordFailedLogin(request.email());
+                    authenticationRateLimitService.recordFailedLogin(request.email(), clientIpAddress);
                     return new ApiException("Invalid email or password.", HttpStatus.UNAUTHORIZED);
                 });
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            authenticationRateLimitService.recordFailedLogin(request.email());
+            authenticationRateLimitService.recordFailedLogin(request.email(), clientIpAddress);
             throw new ApiException("Invalid email or password.", HttpStatus.UNAUTHORIZED);
         }
 
@@ -149,7 +154,7 @@ public class AuthServiceImpl implements AuthService {
         final boolean rememberMe = Boolean.TRUE.equals(request.rememberMe());
         final String refreshToken = jwtService.generateRefreshToken(user, rememberMe);
 
-        cookieUtils.setTokenCookies(response, accessToken, refreshToken, rememberMe);
+        cookieUtils.setTokenCookies(servletResponse, accessToken, refreshToken, rememberMe);
 
         return new LoginResponse(user.getId(), user.getEmail(), fullName, user.getRole().name());
     }

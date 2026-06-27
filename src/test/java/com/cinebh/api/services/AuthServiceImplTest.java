@@ -46,6 +46,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceImplTest {
 
+    private static final String CLIENT_IP_ADDRESS = "203.0.113.10";
+
     @Mock
     private UserRepository userRepository;
 
@@ -162,6 +164,7 @@ class AuthServiceImplTest {
     @Test
     void shouldLoginSuccessfully() {
         final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", false);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
@@ -169,9 +172,10 @@ class AuthServiceImplTest {
         when(jwtService.generateAccessToken(testUser)).thenReturn("access-token");
         when(jwtService.generateRefreshToken(testUser, false)).thenReturn("refresh-token");
 
-        final LoginResponse loginResponse = authService.login(request, response);
+        final LoginResponse loginResponse = authService.login(request, servletRequest, response);
 
         assertThat(loginResponse.email()).isEqualTo(testUser.getEmail());
+        verify(authenticationRateLimitService).assertLoginAllowed(request.email(), CLIENT_IP_ADDRESS);
         verify(authenticationRateLimitService).clearFailedLoginAttempts(request.email());
         verify(cookieUtils).setTokenCookies(response, "access-token", "refresh-token", false);
     }
@@ -179,45 +183,48 @@ class AuthServiceImplTest {
     @Test
     void shouldRecordFailedLoginWhenPasswordIsInvalid() {
         final LoginRequest request = new LoginRequest("test@cinebh.com", "WrongPassword123", false);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches(request.password(), testUser.getPasswordHash())).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.login(request, response))
+        assertThatThrownBy(() -> authService.login(request, servletRequest, response))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.UNAUTHORIZED)
                 .hasMessage("Invalid email or password.");
 
-        verify(authenticationRateLimitService).recordFailedLogin(request.email());
+        verify(authenticationRateLimitService).recordFailedLogin(request.email(), CLIENT_IP_ADDRESS);
     }
 
     @Test
     void shouldRecordFailedLoginWhenEmailDoesNotExist() {
         final LoginRequest request = new LoginRequest("missing@cinebh.com", "Password123", false);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authService.login(request, response))
+        assertThatThrownBy(() -> authService.login(request, servletRequest, response))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.UNAUTHORIZED)
                 .hasMessage("Invalid email or password.");
 
-        verify(authenticationRateLimitService).recordFailedLogin(request.email());
+        verify(authenticationRateLimitService).recordFailedLogin(request.email(), CLIENT_IP_ADDRESS);
     }
 
     @Test
     void shouldRejectLoginWhenRateLimitIsExceeded() {
         final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", false);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         doThrow(new ApiException(
                 "Too many failed login attempts. Please try again later.",
                 HttpStatus.TOO_MANY_REQUESTS
-        )).when(authenticationRateLimitService).assertLoginAllowed(request.email());
+        )).when(authenticationRateLimitService).assertLoginAllowed(request.email(), CLIENT_IP_ADDRESS);
 
-        assertThatThrownBy(() -> authService.login(request, response))
+        assertThatThrownBy(() -> authService.login(request, servletRequest, response))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.TOO_MANY_REQUESTS)
                 .hasMessage("Too many failed login attempts. Please try again later.");
@@ -229,13 +236,14 @@ class AuthServiceImplTest {
     void shouldThrowExceptionAndSendNewCodeWhenLoginInactiveUser() {
         final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", false);
         testUser.setActive(false);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches(request.password(), testUser.getPasswordHash())).thenReturn(true);
         when(verificationService.generateAndSaveCode(testUser, VerificationCodeType.ACCOUNT_VERIFICATION)).thenReturn("123456");
 
-        assertThatThrownBy(() -> authService.login(request, response))
+        assertThatThrownBy(() -> authService.login(request, servletRequest, response))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.FORBIDDEN)
                 .hasMessageContaining("Account is not verified");
@@ -294,6 +302,7 @@ class AuthServiceImplTest {
     @Test
     void shouldLoginSuccessfullyWithRememberMe() {
         final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", true);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
@@ -301,11 +310,17 @@ class AuthServiceImplTest {
         when(jwtService.generateAccessToken(testUser)).thenReturn("access-token");
         when(jwtService.generateRefreshToken(testUser, true)).thenReturn("refresh-token");
 
-        final LoginResponse loginResponse = authService.login(request, response);
+        final LoginResponse loginResponse = authService.login(request, servletRequest, response);
 
         assertThat(loginResponse.email()).isEqualTo(testUser.getEmail());
         verify(authenticationRateLimitService).clearFailedLoginAttempts(request.email());
         verify(cookieUtils).setTokenCookies(response, "access-token", "refresh-token", true);
+    }
+
+    private HttpServletRequest createLoginServletRequest() {
+        final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
+        when(servletRequest.getRemoteAddr()).thenReturn(CLIENT_IP_ADDRESS);
+        return servletRequest;
     }
 
     @Test

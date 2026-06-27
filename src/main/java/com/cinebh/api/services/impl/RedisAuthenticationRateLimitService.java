@@ -17,16 +17,42 @@ import java.util.Locale;
 public class RedisAuthenticationRateLimitService implements AuthenticationRateLimitService {
 
     private static final Logger log = LoggerFactory.getLogger(RedisAuthenticationRateLimitService.class);
-    private static final String FAILED_LOGIN_KEY_PREFIX = "auth:login:failed:";
-    private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
+    private static final String FAILED_LOGIN_EMAIL_KEY_PREFIX = "auth:login:failed:";
+    private static final String FAILED_LOGIN_IP_KEY_PREFIX = "auth:login:failed-ip:";
+    private static final int MAX_FAILED_LOGIN_ATTEMPTS_PER_EMAIL = 5;
+    private static final int MAX_FAILED_LOGIN_ATTEMPTS_PER_IP = 20;
     private static final Duration FAILED_LOGIN_WINDOW = Duration.ofMinutes(1);
 
     private final StringRedisTemplate redisTemplate;
 
     @Override
-    public void assertLoginAllowed(final String email) {
-        final String key = failedLoginKey(email);
+    public void assertLoginAllowed(final String email, final String clientIpAddress) {
+        assertLimitAllowed(failedLoginEmailKey(email), MAX_FAILED_LOGIN_ATTEMPTS_PER_EMAIL);
+        assertLimitAllowed(failedLoginIpKey(clientIpAddress), MAX_FAILED_LOGIN_ATTEMPTS_PER_IP);
+    }
 
+    @Override
+    public void recordFailedLogin(final String email, final String clientIpAddress) {
+        recordFailedAttempt(failedLoginEmailKey(email));
+        recordFailedAttempt(failedLoginIpKey(clientIpAddress));
+    }
+
+    @Override
+    public void clearFailedLoginAttempts(final String email) {
+        final String key = failedLoginEmailKey(email);
+
+        if (key == null) {
+            return;
+        }
+
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception exception) {
+            log.warn("Failed to clear failed login attempts", exception);
+        }
+    }
+
+    private void assertLimitAllowed(final String key, final int maxFailedAttempts) {
         if (key == null) {
             return;
         }
@@ -35,7 +61,7 @@ public class RedisAuthenticationRateLimitService implements AuthenticationRateLi
             final String value = redisTemplate.opsForValue().get(key);
             final int failedAttempts = value == null ? 0 : Integer.parseInt(value);
 
-            if (failedAttempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+            if (failedAttempts >= maxFailedAttempts) {
                 throw new ApiException(
                         "Too many failed login attempts. Please try again later.",
                         HttpStatus.TOO_MANY_REQUESTS
@@ -44,14 +70,11 @@ public class RedisAuthenticationRateLimitService implements AuthenticationRateLi
         } catch (ApiException exception) {
             throw exception;
         } catch (Exception exception) {
-            log.warn("Failed to check login rate limit for email={}", email, exception);
+            log.warn("Failed to check login rate limit", exception);
         }
     }
 
-    @Override
-    public void recordFailedLogin(final String email) {
-        final String key = failedLoginKey(email);
-
+    private void recordFailedAttempt(final String key) {
         if (key == null) {
             return;
         }
@@ -63,30 +86,23 @@ public class RedisAuthenticationRateLimitService implements AuthenticationRateLi
                 redisTemplate.expire(key, FAILED_LOGIN_WINDOW);
             }
         } catch (Exception exception) {
-            log.warn("Failed to record failed login attempt for email={}", email, exception);
+            log.warn("Failed to record failed login attempt", exception);
         }
     }
 
-    @Override
-    public void clearFailedLoginAttempts(final String email) {
-        final String key = failedLoginKey(email);
-
-        if (key == null) {
-            return;
-        }
-
-        try {
-            redisTemplate.delete(key);
-        } catch (Exception exception) {
-            log.warn("Failed to clear failed login attempts for email={}", email, exception);
-        }
-    }
-
-    private String failedLoginKey(final String email) {
+    private String failedLoginEmailKey(final String email) {
         if (email == null || email.isBlank()) {
             return null;
         }
 
-        return FAILED_LOGIN_KEY_PREFIX + email.trim().toLowerCase(Locale.ROOT);
+        return FAILED_LOGIN_EMAIL_KEY_PREFIX + email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String failedLoginIpKey(final String clientIpAddress) {
+        if (clientIpAddress == null || clientIpAddress.isBlank()) {
+            return null;
+        }
+
+        return FAILED_LOGIN_IP_KEY_PREFIX + clientIpAddress.trim().toLowerCase(Locale.ROOT);
     }
 }

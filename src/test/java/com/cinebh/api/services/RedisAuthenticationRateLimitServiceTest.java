@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -21,7 +22,9 @@ import static org.mockito.Mockito.when;
 class RedisAuthenticationRateLimitServiceTest {
 
     private static final String EMAIL = "Test@Cinebh.com";
-    private static final String REDIS_KEY = "auth:login:failed:test@cinebh.com";
+    private static final String CLIENT_IP_ADDRESS = "203.0.113.10";
+    private static final String EMAIL_REDIS_KEY = "auth:login:failed:test@cinebh.com";
+    private static final String IP_REDIS_KEY = "auth:login:failed-ip:203.0.113.10";
 
     @Mock
     private StringRedisTemplate redisTemplate;
@@ -39,36 +42,52 @@ class RedisAuthenticationRateLimitServiceTest {
     @Test
     void shouldAllowLoginWhenFailedAttemptCountIsBelowLimit() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get(REDIS_KEY)).thenReturn("4");
+        when(valueOperations.get(EMAIL_REDIS_KEY)).thenReturn("4");
+        when(valueOperations.get(IP_REDIS_KEY)).thenReturn("19");
 
-        rateLimitService.assertLoginAllowed(EMAIL);
+        rateLimitService.assertLoginAllowed(EMAIL, CLIENT_IP_ADDRESS);
     }
 
     @Test
-    void shouldRejectLoginWhenFailedAttemptLimitIsReached() {
+    void shouldRejectLoginWhenEmailLimitIsReached() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get(REDIS_KEY)).thenReturn("5");
+        when(valueOperations.get(EMAIL_REDIS_KEY)).thenReturn("5");
 
-        assertThatThrownBy(() -> rateLimitService.assertLoginAllowed(EMAIL))
+        assertThatThrownBy(() -> rateLimitService.assertLoginAllowed(EMAIL, CLIENT_IP_ADDRESS))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.TOO_MANY_REQUESTS)
                 .hasMessage("Too many failed login attempts. Please try again later.");
     }
 
     @Test
-    void shouldExpireCounterWhenRecordingFirstFailedLogin() {
+    void shouldRejectLoginWhenIpLimitIsReached() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.increment(REDIS_KEY)).thenReturn(1L);
+        when(valueOperations.get(EMAIL_REDIS_KEY)).thenReturn("4");
+        when(valueOperations.get(IP_REDIS_KEY)).thenReturn("20");
 
-        rateLimitService.recordFailedLogin(EMAIL);
-
-        verify(redisTemplate).expire(REDIS_KEY, Duration.ofMinutes(1));
+        assertThatThrownBy(() -> rateLimitService.assertLoginAllowed(EMAIL, CLIENT_IP_ADDRESS))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.TOO_MANY_REQUESTS)
+                .hasMessage("Too many failed login attempts. Please try again later.");
     }
 
     @Test
-    void shouldClearFailedLoginAttempts() {
+    void shouldExpireBothCountersWhenRecordingFirstFailedLogin() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.increment(EMAIL_REDIS_KEY)).thenReturn(1L);
+        when(valueOperations.increment(IP_REDIS_KEY)).thenReturn(1L);
+
+        rateLimitService.recordFailedLogin(EMAIL, CLIENT_IP_ADDRESS);
+
+        verify(redisTemplate).expire(EMAIL_REDIS_KEY, Duration.ofMinutes(1));
+        verify(redisTemplate).expire(IP_REDIS_KEY, Duration.ofMinutes(1));
+    }
+
+    @Test
+    void shouldClearOnlyEmailFailedLoginAttempts() {
         rateLimitService.clearFailedLoginAttempts(EMAIL);
 
-        verify(redisTemplate).delete(REDIS_KEY);
+        verify(redisTemplate).delete(EMAIL_REDIS_KEY);
+        verify(redisTemplate, never()).delete(IP_REDIS_KEY);
     }
 }
