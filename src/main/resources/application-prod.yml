@@ -21,4 +21,6 @@ app:
     access-key: ${APP_STORAGE_ACCESS_KEY}
     secret-key: ${APP_STORAGE_SECRET_KEY}
     public-base-url: ${APP_STORAGE_PUBLIC_BASE_URL}
+    presign-endpoint: ${APP_STORAGE_PRESIGN_ENDPOINT:}
+    presigned-url-ttl: ${APP_STORAGE_PRESIGNED_URL_TTL:5m}
     path-style-access-enabled: false

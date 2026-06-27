@@ -1,6 +1,7 @@
 package com.cinebh.api.services;
 
 import com.cinebh.api.dto.profile.ChangePasswordRequest;
+import com.cinebh.api.dto.profile.ProjectionHistoryStatus;
 import com.cinebh.api.dto.profile.UpdateUserProfileRequest;
 import com.cinebh.api.dto.profile.UserProfileResponse;
 import com.cinebh.api.dto.profile.UserProjectionResponse;
@@ -23,7 +24,6 @@ import com.cinebh.api.repositories.UserRepository;
 import com.cinebh.api.services.impl.BookingCoverImageResolver;
 import com.cinebh.api.services.impl.UserProfileServiceImpl;
 import com.cinebh.api.services.storage.StorageService;
-import com.cinebh.api.services.storage.StoredFile;
 import com.cinebh.api.utils.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +37,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -211,17 +212,17 @@ class UserProfileServiceImplTest {
     }
 
     @Test
-    void shouldReturnProfileImageFromStorage() {
+    void shouldReturnPresignedProfileImageUri() {
         currentUser.setProfileImageUrl("http://localhost:9000/cinebh/profile-images/avatar.png");
-        final StoredFile storedFile = new StoredFile("image/png", "image".getBytes());
+        final URI presignedUri = URI.create("http://localhost:9000/cinebh/profile-images/avatar.png?signature=test");
 
         when(securityUtils.getCurrentUser()).thenReturn(currentUser);
-        when(storageService.download("profile-images/avatar.png")).thenReturn(storedFile);
+        when(storageService.createPresignedGetUri("profile-images/avatar.png")).thenReturn(presignedUri);
 
-        final StoredFile response = userProfileService.getProfileImage();
+        final URI response = userProfileService.getProfileImageUri();
 
-        assertThat(response).isEqualTo(storedFile);
-        verify(storageService).download("profile-images/avatar.png");
+        assertThat(response).isEqualTo(presignedUri);
+        verify(storageService).createPresignedGetUri("profile-images/avatar.png");
     }
 
     @Test
@@ -273,7 +274,9 @@ class UserProfileServiceImplTest {
         when(bookingRepository.findCoverImageUrlsByMovieIds(eq(List.of(movieId))))
                 .thenReturn(Map.of(movieId, "https://cdn.cinebh.com/poster.jpg"));
 
-        final List<UserProjectionResponse> response = userProfileService.getPurchasedProjections("upcoming");
+        final List<UserProjectionResponse> response = userProfileService.getPurchasedProjections(
+                ProjectionHistoryStatus.UPCOMING
+        );
 
         assertThat(response).hasSize(1);
         assertThat(response.getFirst().movieTitle()).isEqualTo("Mandalorian");

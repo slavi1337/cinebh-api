@@ -2,17 +2,17 @@ package com.cinebh.api.controllers;
 
 import com.cinebh.api.dto.profile.ChangePasswordRequest;
 import com.cinebh.api.dto.profile.ProfileLocationOptionsResponse;
+import com.cinebh.api.dto.profile.ProjectionHistoryStatus;
 import com.cinebh.api.dto.profile.UpdateUserProfileRequest;
 import com.cinebh.api.dto.profile.UserProfileResponse;
 import com.cinebh.api.dto.profile.UserProjectionResponse;
 import com.cinebh.api.services.AuthService;
 import com.cinebh.api.services.UserProfileService;
-import com.cinebh.api.services.storage.StoredFile;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -63,23 +63,26 @@ public class UserProfileController {
     }
 
     @GetMapping("/profile-image")
-    public ResponseEntity<byte[]> getProfileImage() {
-        final StoredFile storedFile = userProfileService.getProfileImage();
-
-        return ResponseEntity.ok()
-                .contentType(resolveMediaType(storedFile.contentType()))
-                .body(storedFile.content());
+    public ResponseEntity<Void> getProfileImage() {
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(userProfileService.getProfileImageUri())
+                .build();
     }
 
     @PutMapping("/password")
-    public ResponseEntity<Void> changePassword(@Valid @RequestBody final ChangePasswordRequest request) {
+    public ResponseEntity<Void> changePassword(
+            @Valid @RequestBody final ChangePasswordRequest request,
+            final HttpServletRequest servletRequest,
+            final HttpServletResponse servletResponse
+    ) {
         userProfileService.changePassword(request);
+        authService.logout(servletRequest, servletResponse);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/projections")
     public ResponseEntity<List<UserProjectionResponse>> getPurchasedProjections(
-            @RequestParam(defaultValue = "upcoming") final String status
+            @RequestParam(defaultValue = "UPCOMING") final ProjectionHistoryStatus status
     ) {
         return ResponseEntity.ok(userProfileService.getPurchasedProjections(status));
     }
@@ -92,17 +95,5 @@ public class UserProfileController {
         userProfileService.deactivateCurrentUser();
         authService.logout(request, response);
         return ResponseEntity.noContent().build();
-    }
-
-    private MediaType resolveMediaType(final String contentType) {
-        if (contentType == null || contentType.isBlank()) {
-            return MediaType.APPLICATION_OCTET_STREAM;
-        }
-
-        try {
-            return MediaType.parseMediaType(contentType);
-        } catch (InvalidMediaTypeException exception) {
-            return MediaType.APPLICATION_OCTET_STREAM;
-        }
     }
 }

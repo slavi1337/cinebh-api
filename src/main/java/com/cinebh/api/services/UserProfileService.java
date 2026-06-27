@@ -2,12 +2,13 @@ package com.cinebh.api.services;
 
 import com.cinebh.api.dto.profile.ChangePasswordRequest;
 import com.cinebh.api.dto.profile.ProfileLocationOptionsResponse;
+import com.cinebh.api.dto.profile.ProjectionHistoryStatus;
 import com.cinebh.api.dto.profile.UpdateUserProfileRequest;
 import com.cinebh.api.dto.profile.UserProfileResponse;
 import com.cinebh.api.dto.profile.UserProjectionResponse;
-import com.cinebh.api.services.storage.StoredFile;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URI;
 import java.util.List;
 
 public interface UserProfileService {
@@ -20,11 +21,11 @@ public interface UserProfileService {
 
     UserProfileResponse uploadProfileImage(MultipartFile file);
 
-    StoredFile getProfileImage();
+    URI getProfileImageUri();
 
     void changePassword(ChangePasswordRequest request);
 
     void deactivateCurrentUser();
 
-    List<UserProjectionResponse> getPurchasedProjections(String status);
+    List<UserProjectionResponse> getPurchasedProjections(ProjectionHistoryStatus status);
 }

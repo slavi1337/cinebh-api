@@ -12,6 +12,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.net.URI;
 import java.time.Duration;
@@ -52,6 +53,36 @@ public class S3ClientConfig {
 
         if (storageProperties.getEndpoint() != null && !storageProperties.getEndpoint().isBlank()) {
             builder.endpointOverride(URI.create(storageProperties.getEndpoint()));
+        }
+
+        return builder.build();
+    }
+
+    @Bean
+    public S3Presigner s3Presigner(final StorageProperties storageProperties) {
+        final S3Presigner.Builder builder = S3Presigner.builder()
+                .region(Region.of(storageProperties.getRegion()))
+                .credentialsProvider(
+                        StaticCredentialsProvider.create(
+                                AwsBasicCredentials.create(
+                                        storageProperties.getAccessKey(),
+                                        storageProperties.getSecretKey()
+                                )
+                        )
+                )
+                .serviceConfiguration(
+                        S3Configuration.builder()
+                                .pathStyleAccessEnabled(storageProperties.isPathStyleAccessEnabled())
+                                .build()
+                );
+
+        final String endpoint = storageProperties.getPresignEndpoint() == null
+                || storageProperties.getPresignEndpoint().isBlank()
+                ? storageProperties.getEndpoint()
+                : storageProperties.getPresignEndpoint();
+
+        if (endpoint != null && !endpoint.isBlank()) {
+            builder.endpointOverride(URI.create(endpoint));
         }
 
         return builder.build();

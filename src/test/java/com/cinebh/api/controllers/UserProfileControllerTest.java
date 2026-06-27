@@ -2,11 +2,11 @@ package com.cinebh.api.controllers;
 
 import com.cinebh.api.dto.profile.ChangePasswordRequest;
 import com.cinebh.api.dto.profile.ProfileLocationOptionsResponse;
+import com.cinebh.api.dto.profile.ProjectionHistoryStatus;
 import com.cinebh.api.dto.profile.UpdateUserProfileRequest;
 import com.cinebh.api.dto.profile.UserProfileResponse;
 import com.cinebh.api.services.AuthService;
 import com.cinebh.api.services.UserProfileService;
-import com.cinebh.api.services.storage.StoredFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,6 +20,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,7 +32,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -127,17 +128,14 @@ class UserProfileControllerTest {
 
     @Test
     void shouldReturnProfileImage() throws Exception {
-        when(userProfileService.getProfileImage()).thenReturn(new StoredFile(
-                "image/png",
-                "image".getBytes()
-        ));
+        final URI imageUri = URI.create("https://storage.example.com/presigned-avatar.png");
+        when(userProfileService.getProfileImageUri()).thenReturn(imageUri);
 
         mockMvc.perform(getJson(PROFILE_IMAGE_URL))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.IMAGE_PNG))
-                .andExpect(content().bytes("image".getBytes()));
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", imageUri.toString()));
 
-        verify(userProfileService).getProfileImage();
+        verify(userProfileService).getProfileImageUri();
     }
 
     @Test
@@ -154,17 +152,34 @@ class UserProfileControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(userProfileService).changePassword(any(ChangePasswordRequest.class));
+        verify(authService).logout(any(HttpServletRequest.class), any(HttpServletResponse.class));
     }
 
     @Test
     void shouldReturnPurchasedProjections() throws Exception {
-        when(userProfileService.getPurchasedProjections("past")).thenReturn(List.of());
+        when(userProfileService.getPurchasedProjections(ProjectionHistoryStatus.PAST)).thenReturn(List.of());
 
-        mockMvc.perform(getJson(PROJECTIONS_URL).param("status", "past"))
+        mockMvc.perform(getJson(PROJECTIONS_URL).param("status", "PAST"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
 
-        verify(userProfileService).getPurchasedProjections("past");
+        verify(userProfileService).getPurchasedProjections(ProjectionHistoryStatus.PAST);
+    }
+
+    @Test
+    void shouldUseUpcomingAsDefaultProjectionStatus() throws Exception {
+        when(userProfileService.getPurchasedProjections(ProjectionHistoryStatus.UPCOMING)).thenReturn(List.of());
+
+        mockMvc.perform(getJson(PROJECTIONS_URL))
+                .andExpect(status().isOk());
+
+        verify(userProfileService).getPurchasedProjections(ProjectionHistoryStatus.UPCOMING);
+    }
+
+    @Test
+    void shouldRejectInvalidProjectionStatus() throws Exception {
+        mockMvc.perform(getJson(PROJECTIONS_URL).param("status", "invalid"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

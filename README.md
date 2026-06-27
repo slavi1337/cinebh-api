@@ -324,6 +324,13 @@ If the project uses image/file uploads, object storage must be configured.
     - `storage.access-key`
     - `storage.secret-key`
     - `storage.path-style-access-enabled`
+    - `storage.presign-endpoint`
+    - `storage.presigned-url-ttl`
+
+Profile images are served through short-lived S3 presigned URLs. The presign endpoint must be reachable from the
+browser. For local MinIO this is normally `http://localhost:9000`; in production it must be the public S3/MinIO
+endpoint exposed by the reverse proxy. The URL host must not be rewritten after signing because that invalidates the
+signature.
 
 ## Docker Compose Local Stack
 

@@ -4,6 +4,7 @@ import com.cinebh.api.dto.profile.ChangePasswordRequest;
 import com.cinebh.api.dto.profile.CityOptionResponse;
 import com.cinebh.api.dto.profile.CountryOptionResponse;
 import com.cinebh.api.dto.profile.ProfileLocationOptionsResponse;
+import com.cinebh.api.dto.profile.ProjectionHistoryStatus;
 import com.cinebh.api.dto.profile.UpdateUserProfileRequest;
 import com.cinebh.api.dto.profile.UserProfileResponse;
 import com.cinebh.api.dto.profile.UserProjectionResponse;
@@ -19,7 +20,6 @@ import com.cinebh.api.services.AddressValidationService;
 import com.cinebh.api.services.AdvancedValidationService;
 import com.cinebh.api.services.UserProfileService;
 import com.cinebh.api.services.storage.StorageService;
-import com.cinebh.api.services.storage.StoredFile;
 import com.cinebh.api.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URI;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -43,8 +44,6 @@ import java.util.UUID;
 public class UserProfileServiceImpl implements UserProfileService {
 
     private static final String PROFILE_IMAGE_DIRECTORY = "profile-images";
-    private static final String PAST_PROJECTION_STATUS = "past";
-    private static final String UPCOMING_PROJECTION_STATUS = "upcoming";
     private static final long MAX_PROFILE_IMAGE_SIZE_BYTES = 5L * 1024 * 1024;
 
     private final SecurityUtils securityUtils;
@@ -126,11 +125,11 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     @Override
     @Transactional(readOnly = true)
-    public StoredFile getProfileImage() {
+    public URI getProfileImageUri() {
         final User currentUser = securityUtils.getCurrentUser();
         final String objectKey = profileImageObjectKey(currentUser.getProfileImageUrl());
 
-        return storageService.download(objectKey);
+        return storageService.createPresignedGetUri(objectKey);
     }
 
     @Override
@@ -164,9 +163,9 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserProjectionResponse> getPurchasedProjections(final String status) {
+    public List<UserProjectionResponse> getPurchasedProjections(final ProjectionHistoryStatus status) {
         final User currentUser = securityUtils.getCurrentUser();
-        final boolean upcoming = parseProjectionStatus(status);
+        final boolean upcoming = status == ProjectionHistoryStatus.UPCOMING;
         final List<Booking> bookings = bookingRepository.findPaidBookingsByUserId(
                 currentUser.getId(),
                 OffsetDateTime.now(clock),
@@ -181,18 +180,6 @@ public class UserProfileServiceImpl implements UserProfileService {
                         coverImageUrlsByMovieId.get(booking.getProjection().getMovie().getId())
                 ))
                 .toList();
-    }
-
-    private boolean parseProjectionStatus(final String status) {
-        if (status == null || status.isBlank() || UPCOMING_PROJECTION_STATUS.equalsIgnoreCase(status)) {
-            return true;
-        }
-
-        if (PAST_PROJECTION_STATUS.equalsIgnoreCase(status)) {
-            return false;
-        }
-
-        throw new ApiException("Projection status must be 'upcoming' or 'past'.", HttpStatus.BAD_REQUEST);
     }
 
     private void validatePhoneIsAvailable(final String phone, final UUID currentUserId) {

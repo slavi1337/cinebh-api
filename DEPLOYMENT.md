@@ -106,7 +106,13 @@ Storage:
 APP_STORAGE_ACCESS_KEY=<storage-access-key>
 APP_STORAGE_SECRET_KEY=<storage-secret-key>
 APP_STORAGE_PUBLIC_BASE_URL=<public-storage-base-url>
+APP_STORAGE_PRESIGN_ENDPOINT=https://<public-storage-domain>
+APP_STORAGE_PRESIGNED_URL_TTL=5m
 ```
+
+`APP_STORAGE_ENDPOINT` may use the internal Docker/S3 address. `APP_STORAGE_PRESIGN_ENDPOINT` must be reachable from
+the user's browser because profile-image requests redirect to a presigned object URL. Do not rewrite the host or path
+of a generated presigned URL, as either change invalidates its signature.
 
 Cookie/CORS/frontend:
 
