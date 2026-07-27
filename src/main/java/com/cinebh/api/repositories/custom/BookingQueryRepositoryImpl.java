@@ -113,6 +113,25 @@ public class BookingQueryRepositoryImpl implements BookingQueryRepository {
     }
 
     @Override
+    public List<Booking> findPaidBookingsByUserId(
+            final UUID userId,
+            final OffsetDateTime now,
+            final boolean upcoming
+    ) {
+        final JPAQuery<Booking> query = applyPaymentDetailsGraph(selectDistinctBooking())
+                .where(booking.user.id.eq(userId)
+                        .and(booking.status.eq(BookingStatus.PAID))
+                        .and(upcoming
+                                ? projection.startTime.goe(now)
+                                : projection.startTime.lt(now)));
+
+        return (upcoming
+                ? query.orderBy(projection.startTime.asc(), booking.createdAt.desc())
+                : query.orderBy(projection.startTime.desc(), booking.createdAt.desc()))
+                .fetch();
+    }
+
+    @Override
     public Map<UUID, String> findCoverImageUrlsByMovieIds(final Collection<UUID> movieIds) {
         if (movieIds == null || movieIds.isEmpty()) {
             return Map.of();

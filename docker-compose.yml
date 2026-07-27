@@ -105,6 +105,7 @@ services:
       - APP_STORAGE_ENDPOINT=http://minio:9000
       - APP_STORAGE_PATH_STYLE_ACCESS_ENABLED=true
       - APP_STORAGE_PUBLIC_BASE_URL=${STORAGE_PUBLIC_BASE_URL:-http://localhost:9000/cinebh}
+      - APP_STORAGE_PRESIGN_ENDPOINT=${STORAGE_PRESIGN_ENDPOINT:-http://localhost:9000}
 
   frontend:
     build:

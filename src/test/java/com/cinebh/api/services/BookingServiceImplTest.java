@@ -15,11 +15,13 @@ import com.cinebh.api.entities.Venue;
 import com.cinebh.api.entities.enums.BookingStatus;
 import com.cinebh.api.entities.enums.SeatType;
 import com.cinebh.api.exceptions.ApiException;
+import com.cinebh.api.mappers.BookingResponseMapper;
 import com.cinebh.api.repositories.BookingRepository;
 import com.cinebh.api.repositories.BookingSeatRepository;
 import com.cinebh.api.repositories.ProjectionRepository;
 import com.cinebh.api.repositories.SeatPriceRepository;
 import com.cinebh.api.repositories.SeatTemplateRepository;
+import com.cinebh.api.services.impl.BookingCoverImageResolver;
 import com.cinebh.api.services.impl.BookingServiceImpl;
 import com.cinebh.api.utils.SecurityUtils;
 import com.cinebh.api.websocket.ProjectionSeatEventPublisher;
@@ -97,6 +99,8 @@ class BookingServiceImplTest {
                 securityUtils,
                 projectionSeatEventPublisher,
                 notificationService,
+                new BookingResponseMapper(),
+                new BookingCoverImageResolver(bookingRepository),
                 FIXED_CLOCK
         );
 

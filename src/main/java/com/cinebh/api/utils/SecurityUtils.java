@@ -23,7 +23,13 @@ public final class SecurityUtils {
         }
 
         final String email = authentication.getName();
-        return userRepository.findByEmail(email)
+        final User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ApiException("Current user not found in database", HttpStatus.UNAUTHORIZED));
+
+        if (!user.isActive()) {
+            throw new ApiException("Current user is inactive", HttpStatus.UNAUTHORIZED);
+        }
+
+        return user;
     }
 }

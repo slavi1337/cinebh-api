@@ -9,10 +9,14 @@ import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.UUID;
 
 @Service
@@ -20,6 +24,7 @@ import java.util.UUID;
 public class S3StorageService implements StorageService {
 
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
     private final StorageProperties storageProperties;
 
     @Override
@@ -55,6 +60,26 @@ public class S3StorageService implements StorageService {
     }
 
     @Override
+    public URI createPresignedGetUri(final String objectKey) {
+        validateObjectKey(objectKey);
+
+        final GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(storageProperties.getBucket())
+                .key(objectKey)
+                .build();
+        final GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(storageProperties.getPresignedUrlTtl())
+                .getObjectRequest(getObjectRequest)
+                .build();
+
+        try {
+            return URI.create(s3Presigner.presignGetObject(presignRequest).url().toString());
+        } catch (Exception exception) {
+            throw new ApiException("Failed to create file access URL", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Override
     public void delete(String objectKey) {
         try {
             final DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
@@ -71,5 +96,11 @@ public class S3StorageService implements StorageService {
     @Override
     public String getPublicUrl(String objectKey) {
         return storageProperties.getPublicBaseUrl() + "/" + objectKey;
+    }
+
+    private void validateObjectKey(final String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) {
+            throw new ApiException("File key must not be empty", HttpStatus.BAD_REQUEST);
+        }
     }
 }
