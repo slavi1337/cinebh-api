@@ -46,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final CookieUtils cookieUtils;
     private final SecurityUtils securityUtils;
+    private final AuthenticationRateLimitService authenticationRateLimitService;
 
     @Override
     @Transactional
@@ -121,15 +122,27 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(noRollbackFor = ApiException.class)
-    public LoginResponse login(final LoginRequest request, final HttpServletResponse response) {
+    public LoginResponse login(
+            final LoginRequest request,
+            final HttpServletRequest servletRequest,
+            final HttpServletResponse servletResponse
+    ) {
+        final String clientIpAddress = servletRequest.getRemoteAddr();
+        authenticationRateLimitService.assertLoginAllowed(request.email(), clientIpAddress);
+
         final User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new ApiException("Invalid email or password.", HttpStatus.UNAUTHORIZED));
+                .orElseThrow(() -> {
+                    authenticationRateLimitService.recordFailedLogin(request.email(), clientIpAddress);
+                    return new ApiException("Invalid email or password.", HttpStatus.UNAUTHORIZED);
+                });
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            authenticationRateLimitService.recordFailedLogin(request.email(), clientIpAddress);
             throw new ApiException("Invalid email or password.", HttpStatus.UNAUTHORIZED);
         }
 
         final String fullName = fullNameOrEmail(user);
+        authenticationRateLimitService.clearFailedLoginAttempts(request.email());
 
         if (!user.isActive()) {
             final String code = verificationService.generateAndSaveCode(user, VerificationCodeType.ACCOUNT_VERIFICATION);
@@ -138,9 +151,10 @@ public class AuthServiceImpl implements AuthService {
         }
 
         final String accessToken = jwtService.generateAccessToken(user);
-        final String refreshToken = jwtService.generateRefreshToken(user, request.rememberMe());
+        final boolean rememberMe = Boolean.TRUE.equals(request.rememberMe());
+        final String refreshToken = jwtService.generateRefreshToken(user, rememberMe);
 
-        cookieUtils.setTokenCookies(response, accessToken, refreshToken, request.rememberMe());
+        cookieUtils.setTokenCookies(servletResponse, accessToken, refreshToken, rememberMe);
 
         return new LoginResponse(user.getId(), user.getEmail(), fullName, user.getRole().name());
     }

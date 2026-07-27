@@ -19,11 +19,14 @@ public record LoginRequest(
                 example = "false",
                 defaultValue = "false"
         )
-        boolean rememberMe
+        Boolean rememberMe
 ) {
     public LoginRequest {
         if (email != null) {
             email = email.trim().toLowerCase();
+        }
+        if (rememberMe == null) {
+            rememberMe = false;
         }
     }
 }

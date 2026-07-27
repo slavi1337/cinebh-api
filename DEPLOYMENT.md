@@ -225,8 +225,13 @@ Forward these headers to preserve the public URL for OAuth redirect generation:
 proxy_set_header Host $host;
 proxy_set_header X-Forwarded-Proto https;
 proxy_set_header X-Forwarded-Host $host;
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-For $remote_addr;
 ```
+
+The production profile uses Tomcat's native forwarded-header processing so login rate limiting receives the original
+client address through `HttpServletRequest#getRemoteAddr()`. The backend must only accept forwarded headers from the
+trusted reverse proxy. If another trusted load balancer sits in front of Nginx, configure the complete trusted proxy
+chain explicitly instead of accepting arbitrary client-supplied forwarding headers.
 
 If OAuth redirect URIs are generated with `http` instead of `https`, configure the proxy/Spring forwarded-header
 strategy, for example:

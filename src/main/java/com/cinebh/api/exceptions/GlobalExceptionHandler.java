@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -96,6 +97,21 @@ public class GlobalExceptionHandler {
 
         final ApiErrorResponse response = new ApiErrorResponse(
                 "Invalid request parameter format.",
+                HttpStatus.BAD_REQUEST.value(),
+                OffsetDateTime.now()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleHttpMessageNotReadableException(
+            final HttpMessageNotReadableException exception
+    ) {
+        log.warn("Request body could not be read", exception);
+
+        final ApiErrorResponse response = new ApiErrorResponse(
+                "Invalid request body format.",
                 HttpStatus.BAD_REQUEST.value(),
                 OffsetDateTime.now()
         );
