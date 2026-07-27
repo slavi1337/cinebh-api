@@ -4,6 +4,7 @@ import com.cinebh.api.dto.common.PageResponse;
 import com.cinebh.api.dto.common.FilterResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingFiltersResponse;
 import com.cinebh.api.dto.currentlyshowing.CurrentlyShowingMovieResponse;
+import com.cinebh.api.dto.currentlyshowing.ProjectionTimeResponse;
 import com.cinebh.api.exceptions.ApiException;
 import com.cinebh.api.services.CurrentlyShowingService;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +24,7 @@ import static com.cinebh.api.support.ControllerTestUtils.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,7 +47,37 @@ class CurrentlyShowingControllerTest {
 
     @Test
     void shouldReturnCurrentlyShowingMoviesWithOkStatus() throws Exception {
-        final PageResponse<CurrentlyShowingMovieResponse> response = emptyPageResponse();
+        final UUID movieId = UUID.randomUUID();
+        final UUID projectionId = UUID.randomUUID();
+        final UUID venueId = UUID.randomUUID();
+        final UUID cityId = UUID.randomUUID();
+        final UUID hallId = UUID.randomUUID();
+        final PageResponse<CurrentlyShowingMovieResponse> response = new PageResponse<>(
+                List.of(new CurrentlyShowingMovieResponse(
+                        movieId,
+                        "Avatar",
+                        "poster.jpg",
+                        "PG-13",
+                        "English",
+                        120,
+                        List.of("Action"),
+                        LocalDate.of(2026, 5, 1),
+                        List.of(new ProjectionTimeResponse(
+                                projectionId,
+                                LocalTime.of(12, 0),
+                                venueId,
+                                "Cineplexx",
+                                cityId,
+                                "Sarajevo",
+                                hallId,
+                                "Sala B"
+                        ))
+                )),
+                DEFAULT_PAGE,
+                DEFAULT_SIZE,
+                1,
+                1
+        );
 
         when(currentlyShowingService.getCurrentlyShowing(any(), any(), any()))
                 .thenReturn(response);
@@ -52,6 +86,8 @@ class CurrentlyShowingControllerTest {
                 mockMvc.perform(getJsonWithPagination(CURRENTLY_SHOWING_URL)
                                 .param("date", DEFAULT_DATE))
                         .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.items[0].showtimes[0].hallId").value(hallId.toString()))
+                        .andExpect(jsonPath("$.items[0].showtimes[0].hallName").value("Sala B"))
         );
 
         verify(currentlyShowingService).getCurrentlyShowing(any(), any(), any());

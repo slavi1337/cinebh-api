@@ -9,6 +9,8 @@ public record ProjectionTimeResponse(
         UUID venueId,
         String venueName,
         UUID cityId,
-        String cityName
+        String cityName,
+        UUID hallId,
+        String hallName
 ) {
 }
