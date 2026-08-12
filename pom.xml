@@ -25,6 +25,7 @@
         <jakarta.annotation.version>3.0.0</jakarta.annotation.version>
         <jacoco.version>0.8.12</jacoco.version>
         <libphonenumber.version>9.0.21</libphonenumber.version>
+        <zxing.version>3.5.3</zxing.version>
 
         <jacoco.coverage.minimum>0.70</jacoco.coverage.minimum>
     </properties>
@@ -50,6 +51,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -145,6 +150,11 @@
             <groupId>com.googlecode.libphonenumber</groupId>
             <artifactId>libphonenumber</artifactId>
             <version>${libphonenumber.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>${zxing.version}</version>
         </dependency>
 
         <!-- Testing -->

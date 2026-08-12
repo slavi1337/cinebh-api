@@ -240,7 +240,9 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                         venue.id,
                         venue.name,
                         city.id,
-                        city.name
+                        city.name,
+                        hall.id,
+                        hall.name
                 )
         )
                 .leftJoin(movieGenre).on(movieGenre.movie.id.eq(movie.id))
@@ -272,7 +274,9 @@ public class CurrentlyShowingQueryRepositoryImpl implements CurrentlyShowingQuer
                     row.get(venue.id),
                     row.get(venue.name),
                     row.get(city.id),
-                    row.get(city.name)
+                    row.get(city.name),
+                    row.get(hall.id),
+                    row.get(hall.name)
             );
 
             result.computeIfAbsent(movieId, ignored -> new ArrayList<>()).add(showtime);

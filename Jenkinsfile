@@ -29,6 +29,8 @@ pipeline {
                     string(credentialsId: 'cinebh-google-client-secret', variable: 'GOOGLE_CLIENT_SECRET'),
                     string(credentialsId: 'cinebh-jwt-secret', variable: 'JWT_SECRET'),
                     string(credentialsId: 'cinebh-keystore-password', variable: 'KEYSTORE_PASSWORD'),
+                    string(credentialsId: 'cinebh-stripe-secret-key', variable: 'STRIPE_SECRET_KEY'),
+                    string(credentialsId: 'cinebh-stripe-webhook-secret', variable: 'STRIPE_WEBHOOK_SECRET'),
                     string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')
                 ]) {
                     sh '''
@@ -50,12 +52,15 @@ pipeline {
                             export GOOGLE_CLIENT_SECRET='${GOOGLE_CLIENT_SECRET}'
                             export JWT_SECRET='${JWT_SECRET}'
                             export KEYSTORE_PASSWORD='${KEYSTORE_PASSWORD}'
+                            export STRIPE_SECRET_KEY='${STRIPE_SECRET_KEY}'
+                            export STRIPE_WEBHOOK_SECRET='${STRIPE_WEBHOOK_SECRET}'
                             export COOKIE_DOMAIN=cinebhapp.praksa.abhapp.com
                             export COOKIE_SECURE=true
                             export COOKIE_SAME_SITE=None
                             export CORS_ORIGINS=https://cinebhapp.praksa.abhapp.com
                             export FRONTEND_URL=https://cinebhapp.praksa.abhapp.com
                             export STORAGE_PUBLIC_BASE_URL=https://18.159.94.138:9000/cinebh
+                            export STORAGE_PRESIGN_ENDPOINT=https://18.159.94.138:9000
                             docker-compose down
                             docker-compose up -d
                             sleep 30

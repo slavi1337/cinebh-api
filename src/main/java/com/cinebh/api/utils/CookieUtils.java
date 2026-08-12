@@ -17,6 +17,9 @@ public final class CookieUtils {
 
     private static final String ACCESS_TOKEN_COOKIE = "access_token";
     private static final String REFRESH_TOKEN_COOKIE = "refresh_token";
+    private static final String SESSION_COOKIE = "JSESSIONID";
+    private static final String ROOT_COOKIE_PATH = "/";
+    private static final String API_COOKIE_PATH = "/api/v1";
 
     private final SecurityProperties securityProperties;
 
@@ -39,8 +42,17 @@ public final class CookieUtils {
     }
 
     public void clearTokenCookies(final HttpServletResponse response) {
-        response.addHeader("Set-Cookie", buildPersistentCookie(ACCESS_TOKEN_COOKIE, "", 0).toString());
-        response.addHeader("Set-Cookie", buildPersistentCookie(REFRESH_TOKEN_COOKIE, "", 0).toString());
+        clearCookie(response, ACCESS_TOKEN_COOKIE);
+        clearCookie(response, REFRESH_TOKEN_COOKIE);
+    }
+
+    public void clearSessionCookie(final HttpServletResponse response) {
+        clearCookie(response, SESSION_COOKIE);
+    }
+
+    public void clearAuthenticationCookies(final HttpServletResponse response) {
+        clearTokenCookies(response);
+        clearSessionCookie(response);
     }
 
     public Optional<String> extractCookie(final HttpServletRequest request, final String name) {
@@ -74,21 +86,49 @@ public final class CookieUtils {
     }
 
     private ResponseCookie buildSessionCookie(final String name, final String value) {
-        return baseCookie(name, value).build();
+        return baseCookie(name, value, ROOT_COOKIE_PATH, true).build();
     }
 
     private ResponseCookie buildPersistentCookie(final String name, final String value, final long maxAgeSeconds) {
-        return baseCookie(name, value)
+        return baseCookie(name, value, ROOT_COOKIE_PATH, true)
                 .maxAge(maxAgeSeconds)
                 .build();
     }
 
-    private ResponseCookie.ResponseCookieBuilder baseCookie(final String name, final String value) {
-        return ResponseCookie.from(name, value)
+    private void clearCookie(final HttpServletResponse response, final String name) {
+        response.addHeader("Set-Cookie", buildExpiredCookie(name, ROOT_COOKIE_PATH, true).toString());
+        response.addHeader("Set-Cookie", buildExpiredCookie(name, ROOT_COOKIE_PATH, false).toString());
+        response.addHeader("Set-Cookie", buildExpiredCookie(name, API_COOKIE_PATH, true).toString());
+        response.addHeader("Set-Cookie", buildExpiredCookie(name, API_COOKIE_PATH, false).toString());
+    }
+
+    private ResponseCookie buildExpiredCookie(
+            final String name,
+            final String path,
+            final boolean includeConfiguredDomain
+    ) {
+        return baseCookie(name, "", path, includeConfiguredDomain)
+                .maxAge(0)
+                .build();
+    }
+
+    private ResponseCookie.ResponseCookieBuilder baseCookie(
+            final String name,
+            final String value,
+            final String path,
+            final boolean includeConfiguredDomain
+    ) {
+        final ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
                 .httpOnly(securityProperties.cookie().httpOnly())
                 .secure(securityProperties.cookie().secure())
-                .path("/")
-                .domain(securityProperties.cookie().domain())
+                .path(path)
                 .sameSite(securityProperties.cookie().sameSite());
+
+        final String configuredDomain = securityProperties.cookie().domain();
+        if (includeConfiguredDomain && configuredDomain != null && !configuredDomain.isBlank()) {
+            builder.domain(configuredDomain);
+        }
+
+        return builder;
     }
 }

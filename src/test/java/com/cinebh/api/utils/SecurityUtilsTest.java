@@ -39,6 +39,7 @@ class SecurityUtilsTest {
         final String email = "test@cinebh.com";
         final User user = new User();
         user.setEmail(email);
+        user.setActive(true);
 
         final Authentication auth = setupSecurityContext(email);
         when(auth.getName()).thenReturn(email);
@@ -47,6 +48,22 @@ class SecurityUtilsTest {
         final User result = securityUtils.getCurrentUser();
 
         assertThat(result.getEmail()).isEqualTo(email);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCurrentUserIsInactive() {
+        final String email = "inactive@cinebh.com";
+        final User user = new User();
+        user.setEmail(email);
+        user.setActive(false);
+
+        final Authentication auth = setupSecurityContext(email);
+        when(auth.getName()).thenReturn(email);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> securityUtils.getCurrentUser())
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Current user is inactive");
     }
 
     @Test

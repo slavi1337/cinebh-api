@@ -17,6 +17,7 @@ import com.cinebh.api.utils.CookieUtils;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -34,12 +37,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceImplTest {
+
+    private static final String CLIENT_IP_ADDRESS = "203.0.113.10";
 
     @Mock
     private UserRepository userRepository;
@@ -67,6 +74,9 @@ class AuthServiceImplTest {
 
     @Mock
     private CookieUtils cookieUtils;
+
+    @Mock
+    private AuthenticationRateLimitService authenticationRateLimitService;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -154,6 +164,7 @@ class AuthServiceImplTest {
     @Test
     void shouldLoginSuccessfully() {
         final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", false);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
@@ -161,23 +172,78 @@ class AuthServiceImplTest {
         when(jwtService.generateAccessToken(testUser)).thenReturn("access-token");
         when(jwtService.generateRefreshToken(testUser, false)).thenReturn("refresh-token");
 
-        final LoginResponse loginResponse = authService.login(request, response);
+        final LoginResponse loginResponse = authService.login(request, servletRequest, response);
 
         assertThat(loginResponse.email()).isEqualTo(testUser.getEmail());
+        verify(authenticationRateLimitService).assertLoginAllowed(request.email(), CLIENT_IP_ADDRESS);
+        verify(authenticationRateLimitService).clearFailedLoginAttempts(request.email());
         verify(cookieUtils).setTokenCookies(response, "access-token", "refresh-token", false);
+    }
+
+    @Test
+    void shouldRecordFailedLoginWhenPasswordIsInvalid() {
+        final LoginRequest request = new LoginRequest("test@cinebh.com", "WrongPassword123", false);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches(request.password(), testUser.getPasswordHash())).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login(request, servletRequest, response))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.UNAUTHORIZED)
+                .hasMessage("Invalid email or password.");
+
+        verify(authenticationRateLimitService).recordFailedLogin(request.email(), CLIENT_IP_ADDRESS);
+    }
+
+    @Test
+    void shouldRecordFailedLoginWhenEmailDoesNotExist() {
+        final LoginRequest request = new LoginRequest("missing@cinebh.com", "Password123", false);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login(request, servletRequest, response))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.UNAUTHORIZED)
+                .hasMessage("Invalid email or password.");
+
+        verify(authenticationRateLimitService).recordFailedLogin(request.email(), CLIENT_IP_ADDRESS);
+    }
+
+    @Test
+    void shouldRejectLoginWhenRateLimitIsExceeded() {
+        final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", false);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        doThrow(new ApiException(
+                "Too many failed login attempts. Please try again later.",
+                HttpStatus.TOO_MANY_REQUESTS
+        )).when(authenticationRateLimitService).assertLoginAllowed(request.email(), CLIENT_IP_ADDRESS);
+
+        assertThatThrownBy(() -> authService.login(request, servletRequest, response))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.TOO_MANY_REQUESTS)
+                .hasMessage("Too many failed login attempts. Please try again later.");
+
+        verifyNoInteractions(userRepository, passwordEncoder, jwtService, cookieUtils);
     }
 
     @Test
     void shouldThrowExceptionAndSendNewCodeWhenLoginInactiveUser() {
         final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", false);
         testUser.setActive(false);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches(request.password(), testUser.getPasswordHash())).thenReturn(true);
         when(verificationService.generateAndSaveCode(testUser, VerificationCodeType.ACCOUNT_VERIFICATION)).thenReturn("123456");
 
-        assertThatThrownBy(() -> authService.login(request, response))
+        assertThatThrownBy(() -> authService.login(request, servletRequest, response))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.FORBIDDEN)
                 .hasMessageContaining("Account is not verified");
@@ -191,6 +257,7 @@ class AuthServiceImplTest {
         final String email = "test@cinebh.com";
         final User user = new User();
         user.setEmail(email);
+        user.setActive(true);
         final Claims claims = mock(Claims.class);
 
         final HttpServletRequest request = mock(HttpServletRequest.class);
@@ -210,8 +277,32 @@ class AuthServiceImplTest {
     }
 
     @Test
+    void shouldThrowExceptionWhenRefreshingInactiveUser() {
+        final String refreshToken = "valid-refresh-token";
+        final String email = "inactive@cinebh.com";
+        final User user = new User();
+        user.setEmail(email);
+        user.setActive(false);
+        final Claims claims = mock(Claims.class);
+
+        final HttpServletRequest request = mock(HttpServletRequest.class);
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+
+        when(cookieUtils.extractCookie(request, "refresh_token")).thenReturn(Optional.of(refreshToken));
+        when(jwtService.extractClaims(refreshToken)).thenReturn(claims);
+        when(claims.getSubject()).thenReturn(email);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.refresh(request, response))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("status", HttpStatus.UNAUTHORIZED)
+                .hasMessage("Invalid or expired refresh token.");
+    }
+
+    @Test
     void shouldLoginSuccessfullyWithRememberMe() {
         final LoginRequest request = new LoginRequest("test@cinebh.com", "Password123", true);
+        final HttpServletRequest servletRequest = createLoginServletRequest();
         final HttpServletResponse response = mock(HttpServletResponse.class);
 
         when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(testUser));
@@ -219,17 +310,34 @@ class AuthServiceImplTest {
         when(jwtService.generateAccessToken(testUser)).thenReturn("access-token");
         when(jwtService.generateRefreshToken(testUser, true)).thenReturn("refresh-token");
 
-        final LoginResponse loginResponse = authService.login(request, response);
+        final LoginResponse loginResponse = authService.login(request, servletRequest, response);
 
         assertThat(loginResponse.email()).isEqualTo(testUser.getEmail());
+        verify(authenticationRateLimitService).clearFailedLoginAttempts(request.email());
         verify(cookieUtils).setTokenCookies(response, "access-token", "refresh-token", true);
+    }
+
+    private HttpServletRequest createLoginServletRequest() {
+        final HttpServletRequest servletRequest = mock(HttpServletRequest.class);
+        when(servletRequest.getRemoteAddr()).thenReturn(CLIENT_IP_ADDRESS);
+        return servletRequest;
     }
 
     @Test
     void shouldLogoutSuccessfully() {
+        final HttpServletRequest request = mock(HttpServletRequest.class);
         final HttpServletResponse response = mock(HttpServletResponse.class);
-        authService.logout(response);
-        verify(cookieUtils).clearTokenCookies(response);
+        final HttpSession session = mock(HttpSession.class);
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("test@cinebh.com", null)
+        );
+        when(request.getSession(false)).thenReturn(session);
+
+        authService.logout(request, response);
+
+        verify(cookieUtils).clearAuthenticationCookies(response);
+        verify(session).invalidate();
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test

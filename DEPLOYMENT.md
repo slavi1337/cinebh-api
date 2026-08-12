@@ -106,7 +106,13 @@ Storage:
 APP_STORAGE_ACCESS_KEY=<storage-access-key>
 APP_STORAGE_SECRET_KEY=<storage-secret-key>
 APP_STORAGE_PUBLIC_BASE_URL=<public-storage-base-url>
+APP_STORAGE_PRESIGN_ENDPOINT=https://<public-storage-domain>
+APP_STORAGE_PRESIGNED_URL_TTL=5m
 ```
+
+`APP_STORAGE_ENDPOINT` may use the internal Docker/S3 address. `APP_STORAGE_PRESIGN_ENDPOINT` must be reachable from
+the user's browser because profile-image requests redirect to a presigned object URL. Do not rewrite the host or path
+of a generated presigned URL, as either change invalidates its signature.
 
 Cookie/CORS/frontend:
 
@@ -219,8 +225,13 @@ Forward these headers to preserve the public URL for OAuth redirect generation:
 proxy_set_header Host $host;
 proxy_set_header X-Forwarded-Proto https;
 proxy_set_header X-Forwarded-Host $host;
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-For $remote_addr;
 ```
+
+The production profile uses Tomcat's native forwarded-header processing so login rate limiting receives the original
+client address through `HttpServletRequest#getRemoteAddr()`. The backend must only accept forwarded headers from the
+trusted reverse proxy. If another trusted load balancer sits in front of Nginx, configure the complete trusted proxy
+chain explicitly instead of accepting arbitrary client-supplied forwarding headers.
 
 If OAuth redirect URIs are generated with `http` instead of `https`, configure the proxy/Spring forwarded-header
 strategy, for example:

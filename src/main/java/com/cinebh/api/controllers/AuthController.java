@@ -78,13 +78,15 @@ public class AuthController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Login successful"),
             @ApiResponse(responseCode = "401", description = "Invalid credentials"),
-            @ApiResponse(responseCode = "403", description = "Account not verified")
+            @ApiResponse(responseCode = "403", description = "Account not verified"),
+            @ApiResponse(responseCode = "429", description = "Too many failed login attempts")
     })
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody final LoginRequest loginRequest,
+            final HttpServletRequest request,
             final HttpServletResponse response
     ) {
-        return ResponseEntity.ok(authService.login(loginRequest, response));
+        return ResponseEntity.ok(authService.login(loginRequest, request, response));
     }
 
     @GetMapping("/me")
@@ -105,8 +107,8 @@ public class AuthController {
             summary = "Logout user",
             description = "Clears JWT authentication cookies"
     )
-    public ResponseEntity<Void> logout(final HttpServletResponse response) {
-        authService.logout(response);
+    public ResponseEntity<Void> logout(final HttpServletRequest request, final HttpServletResponse response) {
+        authService.logout(request, response);
         return ResponseEntity.noContent().build();
     }
 

@@ -1,3 +1,10 @@
+server:
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+
 spring:
   datasource:
     url: ${DB_URL}
@@ -7,6 +14,13 @@ spring:
     show-sql: false
 
 app:
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:https://cinebhapp.praksa.abhapp.com}
+  payment:
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      currency: ${STRIPE_CURRENCY:bam}
   storage:
     bucket: cinebh
     region: eu-central-1
@@ -14,4 +28,6 @@ app:
     access-key: ${APP_STORAGE_ACCESS_KEY}
     secret-key: ${APP_STORAGE_SECRET_KEY}
     public-base-url: ${APP_STORAGE_PUBLIC_BASE_URL}
+    presign-endpoint: ${APP_STORAGE_PRESIGN_ENDPOINT:}
+    presigned-url-ttl: ${APP_STORAGE_PRESIGNED_URL_TTL:5m}
     path-style-access-enabled: false

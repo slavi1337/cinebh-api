@@ -12,11 +12,11 @@ public interface AuthService {
 
     void verify(VerifyRequest request);
 
-    LoginResponse login(LoginRequest request, HttpServletResponse response);
+    LoginResponse login(LoginRequest request, HttpServletRequest servletRequest, HttpServletResponse servletResponse);
 
     LoginResponse getCurrentUser();
 
     void refresh(HttpServletRequest request, HttpServletResponse response);
 
-    void logout(HttpServletResponse response);
+    void logout(HttpServletRequest request, HttpServletResponse response);
 }
